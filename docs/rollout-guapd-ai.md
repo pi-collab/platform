@@ -26,7 +26,7 @@ What ships: brief-based creator search at `/ai` over exactly the creators `/brow
 ## Step 1: database (prod SQL editor, by PJ)
 
 - [ ] Confirm prod is at 0584: `SELECT max(version) FROM supabase_migrations.schema_migrations;`
-- [ ] Run `supabase/prod-run-0585-0590.sql` top to bottom. Order matters: 0585 → 0586 → 0587 → 0588 → 0589 → 0590 (0586/0588 recreate 0585's function; 0587/0589 reference 0585's table; 0588 drops 0585's unused opt-in column; 0590 adds the onboarding, Coming soon, Meta-state and consent tables)
+- [ ] Run `supabase/prod-run-0585-0591.sql` top to bottom. Order matters: 0585 → 0586 → 0587 → 0588 → 0589 → 0590 → 0591 (0591 adds the stored order for Load more; 0586/0588 recreate 0585's function; 0587/0589 reference 0585's table; 0588 drops 0585's unused opt-in column; 0590 adds the onboarding, Coming soon, Meta-state and consent tables)
 - [ ] Checks at the end: 8 new tables with RLS on and no client rights; both functions service_role only; search pool count = `/browse` count; no `search_opt_in_at`; no `i-` storefront slugs
 - [ ] Ledger insert at the end of the file
 - Safe before the code: nothing reads these until a flag is set.
@@ -77,8 +77,9 @@ Proposed GO (PJ to set): at least 80% with a niche, 60% with a bio, 30% with a c
 - [ ] Data-quality GO
 - [ ] PJ adds `ANTHROPIC_API_KEY` to Production
 - [ ] `CREATOR_SEARCH_BRAND_IDS` = the 2–3 brand ids, then `CREATOR_SEARCH=1`; redeploy
-- [ ] Check: those brands get the icon, the highlight on their home (once), the intro on first visit, then search; other brands get no icon and 404; hidden creators never appear; nothing about Instagram anywhere; PostHog events arrive
-- [ ] Watch a week: `[creator-search] parsed` token lines, 429s, empty or thin results, creators turning search off
+- [ ] Pick 2–3 APPROVED brands: an unapproved brand gets restricted search (no city/language/engagement filters) and no invites or Instagram
+- [ ] Check: those brands get the icon, the highlight on their home (once), the intro on first visit, then search; Load more pages to the end with no repeats; other brands get no icon and 404; hidden creators never appear; nothing about Instagram anywhere; PostHog events arrive
+- [ ] Watch a week: `[abuse-alert]` lines (many different briefs, rate limits, invite bursts), `[creator-search] parsed` token lines, 429s, empty or thin results, creators turning search off
 - [ ] Widen later (more ids, or unset the list), as its own go-ahead
 - Rollback: unset `CREATOR_SEARCH` or remove a brand id.
 

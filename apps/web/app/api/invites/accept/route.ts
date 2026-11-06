@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
   if (!INVITE_TOKEN.test(token)) return NextResponse.json({ ok: false, message: 'That invite was not found.' }, { status: 404 })
 
   const admin = createAdminClient()
-  const { data: invite } = await admin.from('brand_creator_invites').select('id, brand_id, ig_username, accepted_at, creator_id, signed_up_at').eq('token', token).maybeSingle()
-  if (!invite) return NextResponse.json({ ok: false, message: 'That invite was not found.' }, { status: 404 })
+  const { data: invite } = await admin.from('brand_creator_invites').select('id, brand_id, ig_username, accepted_at, creator_id, signed_up_at, brands(brand_status)').eq('token', token).maybeSingle()
+  if (!invite || (invite as unknown as { brands: { brand_status: string } | null }).brands?.brand_status !== 'approved') return NextResponse.json({ ok: false, message: 'That invite was not found.' }, { status: 404 })
   if (invite.accepted_at) return NextResponse.json({ ok: true, already: true })
 
   const { data: ig } = await admin.from('creator_instagram_connections').select('username, status').eq('creator_id', ctx.creatorId).maybeSingle()

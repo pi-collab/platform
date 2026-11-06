@@ -66,7 +66,7 @@ export default async function SettingsPage() {
 
   // Instagram Creator Marketplace status: only when it is on here.
   let instagram = null
-  if (metaMarketplaceEnabled() && metaAppConfigured()) {
+  if (metaMarketplaceEnabled() && metaAppConfigured() && brand.brandStatus === 'approved') {
     const [{ data: conn }, { data: elig }] = await Promise.all([
       admin.from('brand_meta_connections').select('status, ig_username, page_name').eq('brand_id', brand.brandId).maybeSingle(),
       admin.from('brand_meta_eligibility').select('state').eq('brand_id', brand.brandId).maybeSingle(),

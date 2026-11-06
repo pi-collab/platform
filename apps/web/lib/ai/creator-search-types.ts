@@ -169,6 +169,20 @@ export interface CreatorSearchResponse {
   loosen: LoosenHint | null
   /** Asks the data cannot check, said plainly. */
   notChecked: string[]
+  /** All matches in the stored order (at most RANKED_CAP). */
+  total: number
+  /** More matches after the ones shown: Load more. */
+  hasMore: boolean
+  /** Unapproved brand: no more than /browse gives them (see RankOptions). */
+  restricted: boolean
+}
+
+export interface CreatorSearchPage {
+  ok: true
+  results: CreatorSearchResult[]
+  hasMore: boolean
+  /** Shown so far, including this page. */
+  shown: number
 }
 
 export interface CreatorSearchError {
@@ -177,4 +191,9 @@ export interface CreatorSearchError {
   kind: 'off' | 'unauthorised' | 'bad_request' | 'rate_limited' | 'unreadable' | 'failed' | 'not_found'
 }
 
-export const RESULT_CAP = 20
+/** Matches per page; Load more adds the next PAGE_SIZE. */
+export const PAGE_SIZE = 20
+/** The most of a search's ranked order that is kept and can be paged through. */
+export const RANKED_CAP = 500
+/** Kept for the ranker's default single-page limit. */
+export const RESULT_CAP = PAGE_SIZE

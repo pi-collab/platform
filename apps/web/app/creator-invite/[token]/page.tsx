@@ -10,17 +10,21 @@ export const metadata = { title: 'Campaign invite · Guapd', robots: { index: fa
 
 /**
  * A brand's invite to a creator found on Instagram (guapd.com/c/i-<token>).
- * Shows Guapd's reading of the brief, never Meta data, and walks the creator
+ * Shows the approved brand's name and Guapd's own summary (built from fixed
+ * lists, lib/meta/invite-gate.ts), never text the brand typed or Meta data, and walks the creator
  * through: sign up with phone OTP → connect Instagram → accept.
  */
 export default async function InvitePage({ params }: { params: { token: string } }) {
   if (!creatorInvitesEnabled() || !INVITE_TOKEN.test(params.token)) notFound()
   const admin = createAdminClient()
   const { data: invite } = await admin.from('brand_creator_invites')
-    .select('id, ig_username, summary, deliverables, timeline, accepted_at, signed_up_at, brands(name, logo_url)')
+    .select('id, ig_username, summary, deliverables, accepted_at, signed_up_at, brands(name, logo_url, brand_status)')
     .eq('token', params.token).maybeSingle()
   if (!invite) notFound()
-  const brand = (invite as unknown as { brands: { name: string | null; logo_url: string | null } | null }).brands
+  const brand = (invite as unknown as { brands: { name: string | null; logo_url: string | null; brand_status: string } | null }).brands
+  // Only an approved brand's invite exists (0591): unapproved or later
+  // rejected, the link is a 404, like one that was never made.
+  if (!brand || brand.brand_status !== 'approved') notFound()
 
   let state: InviteState = 'visitor'
   if (invite.accepted_at) state = 'accepted'
@@ -50,7 +54,7 @@ export default async function InvitePage({ params }: { params: { token: string }
       username={invite.ig_username}
       summary={invite.summary}
       deliverables={invite.deliverables ?? []}
-      timeline={invite.timeline}
+      timeline={null}
     />
   )
 }

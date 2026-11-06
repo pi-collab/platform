@@ -201,7 +201,8 @@ async function main() {
 
     const page = await fetch(`${APP}/c/${token}`)
     const html = await page.text()
-    ok('invite page renders at /c/<token>', page.status === 200 && html.includes(FILTERS.summary) && html.includes(`@${NOT_ON}`))
+    ok('invite page renders at /c/<token> with Guapd\'s own summary', page.status === 200 && html.replace(/<!-- -->/g, '').includes('Looking for Home, Interior Design &amp; DIY creators to make reels for a campaign on Guapd.') && html.includes(`@${NOT_ON}`))
+    ok('invite page never shows the brief\'s free-text summary', !html.includes(FILTERS.summary))
     ok('invite page shows no budget, competitor or email', !/50k|brandx|@example\.com/i.test(html))
     const open = await fetch(`${APP}/api/invites/open`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token }) })
     ok('open is recorded and remembered in a cookie', open.status === 200 && (open.headers.get('set-cookie') ?? '').includes('guapd_invite='))

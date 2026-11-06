@@ -1847,3 +1847,7 @@ ALTER TABLE creator_consent_log ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON brand_user_ai_onboarding, ai_feature_interest, brand_meta_eligibility, creator_consent_log FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON brand_user_ai_onboarding, ai_feature_interest, brand_meta_eligibility, creator_consent_log TO service_role;
 -- creators.whatsapp_updates_consent_at: no client SELECT grant; server written.
+
+-- ── Guapd AI paging (0591) ──────────────────────────────────────────────────
+-- brand_creator_searches.ranked_ids / shown_count: new columns on a server-only
+-- table (0585 grants unchanged). No new tables or policies.

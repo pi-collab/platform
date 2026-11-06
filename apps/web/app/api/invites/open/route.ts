@@ -11,7 +11,10 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => null)
   const token = typeof body?.token === 'string' ? body.token : ''
   if (!INVITE_TOKEN.test(token)) return NextResponse.json({ ok: false }, { status: 400 })
-  await createAdminClient().from('brand_creator_invites').update({ opened_at: new Date().toISOString() }).eq('token', token).is('opened_at', null)
+  const admin = createAdminClient()
+  const { data: inv } = await admin.from('brand_creator_invites').select('id, brands(brand_status)').eq('token', token).maybeSingle()
+  if (!inv || (inv as unknown as { brands: { brand_status: string } | null }).brands?.brand_status !== 'approved') return NextResponse.json({ ok: false }, { status: 404 })
+  await admin.from('brand_creator_invites').update({ opened_at: new Date().toISOString() }).eq('id', inv.id).is('opened_at', null)
   const res = NextResponse.json({ ok: true })
   res.cookies.set(INVITE_COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: INVITE_COOKIE_MAX_AGE })
   return res
