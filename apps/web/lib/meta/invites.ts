@@ -2,7 +2,8 @@ import { randomBytes } from 'node:crypto'
 
 /**
  * Invites to creators found on Instagram who are not on Guapd yet.
- * guapd.com/c/i-<26 base36> is rewritten to /invite/<token> by middleware;
+ * guapd.com/c/i-<26 base36> is rewritten to /creator-invite/<token> by
+ * middleware (/invite/ is the brand team invite);
  * the "i-" prefix is reserved and can never be a storefront slug.
  */
 
