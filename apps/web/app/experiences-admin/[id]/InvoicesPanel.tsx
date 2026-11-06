@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import StatusChip, { type ChipTone } from '@/components/StatusChip'
 import ConfirmDialog from '@/components/ui/ConfirmDialog'
-import { formatRupees } from '@/lib/experience-request'
+import { formatRupees, stageMomentLabel, type InvoiceStages } from '@/lib/experience-request'
 import type { ConsoleInvoice, ConsoleInvoices } from '@/lib/experience-console-server'
 import {
   createInvoicePdf, discardInvoice, draftInvoice, editInvoice, issueInvoice, recordInvoicePayment,
@@ -44,7 +44,7 @@ type Ask =
   | { kind: 'reverse'; paymentId: string }
   | { kind: 'reject_report'; reportId: string }
 
-export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
+export default function InvoicesPanel({ data, stages = {} }: { data: ConsoleInvoices; stages?: Record<string, InvoiceStages> }) {
   const router = useRouter()
   const [pending, start] = useTransition()
   const [error, setError] = useState<string | null>(null)
@@ -129,6 +129,15 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
                       Received {formatRupees(inv.paid_paise)} · due {formatRupees(inv.outstanding_paise)}
                     </div>
                   )}
+                  {/* 0579: paid in stages: what is due now, and each stage. */}
+                  {stages[inv.id]?.scheduled && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: 'var(--ink-soft)' }}>
+                      <div style={{ fontWeight: 600, color: 'var(--ink)' }}>Due now {formatRupees(stages[inv.id].due_now_paise)}{stages[inv.id].next_stage && stages[inv.id].due_now_paise === 0 && inv.status === 'issued' ? ` · next: ${stages[inv.id].next_stage}` : ''}</div>
+                      {stages[inv.id].stages.map((x) => (
+                        <div key={x.label}>{x.label} {Number(x.pct)}% · {formatRupees(x.amount_paise)} · {stageMomentLabel(x.on).toLowerCase()} · {x.state === 'paid' ? 'received' : x.state === 'checking' ? 'marked paid, to check' : x.state === 'due' ? 'due' : 'not due yet'}</div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
                   <StatusChip label={st.label} tone={st.tone} />
@@ -155,9 +164,11 @@ export default function InvoicesPanel({ data }: { data: ConsoleInvoices }) {
                   {inv.payments.map((p) => (
                     <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', fontFamily: 'var(--font-ui)', fontSize: 12.5,
                       color: p.reversed_at ? 'var(--ink-faint)' : 'var(--ink)', textDecoration: p.reversed_at ? 'line-through' : 'none', padding: '6px 10px', borderRadius: 10, background: '#F7F7F3' }}>
-                      <span>{fmtDate(p.received_on)} · {METHOD[p.method] ?? p.method} · ref {p.reference} · {formatRupees(p.amount_paise)}{Number(p.tds_paise) ? ` + TDS ${formatRupees(p.tds_paise)}` : ''}</span>
+                      <span>{fmtDate(p.received_on)} · {p.method === 'razorpay' ? 'Razorpay (online)' : METHOD[p.method] ?? p.method} · ref {p.reference} · {formatRupees(p.amount_paise)}{Number(p.tds_paise) ? ` + TDS ${formatRupees(p.tds_paise)}` : ''}</span>
                       <span style={{ display: 'flex', gap: 10, textDecoration: 'none' }}>
-                        <button type="button" style={linkBtn} onClick={async () => { const e = await openFinanceFileInTab('invoice-payment', p.id); if (e) setError(e) }}>Proof</button>
+                        {p.method === 'razorpay'
+                          ? <span title="Proof is Razorpay's signed webhook; see the payment in the Razorpay dashboard">Verified by Razorpay</span>
+                          : <button type="button" style={linkBtn} onClick={async () => { const e = await openFinanceFileInTab('invoice-payment', p.id); if (e) setError(e) }}>Proof</button>}
                         {!p.reversed_at && open && <button type="button" style={{ ...linkBtn, color: '#9C4147' }} onClick={() => { setReason(''); setAsk({ kind: 'reverse', paymentId: p.id }) }}>Reverse</button>}
                         {p.reversed_at && <span>Reversed: {p.reversed_reason}</span>}
                       </span>

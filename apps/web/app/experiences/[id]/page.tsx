@@ -1,15 +1,16 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { verifyBrand } from '@/lib/brand-auth'
-import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandReport, getBrandRosterPage, getBrandSuggestions, getBrandCollabPosts, getBrandPostPerformance, type BrandInvoice } from '@/lib/experience-brand-server'
+import { getBrandAddons, getBrandDeliverables, getBrandExperience, getBrandGuapdThread, getBrandInvoices, getBrandPaymentStages, getBrandReport, getBrandRosterPage, getBrandSuggestions, getBrandCollabPosts, getBrandPostPerformance, type BrandInvoice } from '@/lib/experience-brand-server'
 import GuapdChat from './GuapdChat'
 import OpenDealChat from '@/components/OpenDealChat'
 import { BRAND_STEPS, brandNext, brandStage, brandStepIndex } from '@/lib/experience-brand-status'
-import { countOf, formatRupees } from '@/lib/experience-request'
+import { countOf, formatRupees, type InvoiceStages } from '@/lib/experience-request'
 import StatusChip from '@/components/StatusChip'
 import StepperTimeline from '@/components/StepperTimeline'
 import InvoicePdf from './InvoicePdf'
 import InvoicePayments from './InvoicePayments'
+import { razorpayConfigured } from '@/lib/razorpay-payin'
 import { RosterPager, RosterSearchBox } from './RosterSearch'
 import { LIST_PAGE_SIZE } from '@/lib/list-page'
 import ViewFile from './ViewFile'
@@ -52,13 +53,16 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   // 0569: the brand's creators are searched and paged in the database, over the shared roster only.
   const rosterQ = (searchParams?.rq ?? '').trim().slice(0, 100)
   const rosterPage = Math.max(1, Number.parseInt(searchParams?.rpage ?? '1', 10) || 1)
-  const [roster, deliverables, invoices, report, guapdThread] = await Promise.all([
+  const [roster, deliverables, invoices, report, guapdThread, payStages] = await Promise.all([
     hasRoster ? getBrandRosterPage(e.id, rosterQ || null, LIST_PAGE_SIZE, (rosterPage - 1) * LIST_PAGE_SIZE) : Promise.resolve(null),
     showDeliverables ? getBrandDeliverables(e.id) : Promise.resolve(null),
     getBrandInvoices(e.id),
     e.status === 'complete' ? getBrandReport(e.id) : Promise.resolve(null),
     getBrandGuapdThread(e.id),
+    getBrandPaymentStages(e.id),
   ])
+  // 0579: payment stages, on the quote and per invoice.
+  const stagesOf = payStages.ok ? payStages.data : { quotes: {}, invoices: {} }
   // 0558: the brand's suggestions of creators not on Guapd yet.
   const sugRes = hasRoster ? await getBrandSuggestions(e.id) : null
   const suggestions = sugRes?.ok ? sugRes.data : []
@@ -204,7 +208,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
         <div style={{ marginTop: 12 }}>
           <AgreedTotal quoteTotal={e.quote?.status === 'accepted' ? e.quote.total_paise : null} agreedTotal={e.agreed_total_paise} addons={addons} />
           {addons.some((a) => a.status === 'accepted') && <div className="bx-flabel" style={{ marginBottom: 6 }}>Original price</div>}
-          <QuoteCard experienceId={e.id} quote={e.quote} isAdmin={e.is_admin} agreedTotal={addons.some((a) => a.status === 'accepted') ? null : e.agreed_total_paise} />
+          <QuoteCard experienceId={e.id} quote={e.quote} isAdmin={e.is_admin} agreedTotal={addons.some((a) => a.status === 'accepted') ? null : e.agreed_total_paise} stages={e.quote ? stagesOf.quotes[e.quote.quote_id] ?? [] : []} />
           <AddonHistory addons={addons} />
         </div>
       </section>
@@ -229,7 +233,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
 
       {!reviewing && reviewBlock}
 
-      {invoiceList.length > 0 && <Invoices experienceId={e.id} isAdmin={e.is_admin} invoices={invoiceList} fmt={fmt} />}
+      {invoiceList.length > 0 && <Invoices experienceId={e.id} isAdmin={e.is_admin} invoices={invoiceList} fmt={fmt} onlineEnabled={razorpayConfigured()} stages={stagesOf.invoices} />}
 
       {guapdThread.ok && <GuapdChat experienceId={e.id} messages={guapdThread.data} autoOpen={searchParams?.chat === '1'} />}
 
@@ -247,7 +251,7 @@ export default async function BrandExperiencePage({ params, searchParams }: { pa
   )
 }
 
-function Invoices({ experienceId, isAdmin, invoices, fmt }: { experienceId: string; isAdmin: boolean; invoices: BrandInvoice[]; fmt: (iso: string | null) => string | null }) {
+function Invoices({ experienceId, isAdmin, invoices, fmt, onlineEnabled, stages }: { experienceId: string; isAdmin: boolean; invoices: BrandInvoice[]; fmt: (iso: string | null) => string | null; onlineEnabled: boolean; stages: Record<string, InvoiceStages> }) {
   return (
     <section className="surface bx-card" aria-labelledby="bx-inv">
       <h2 id="bx-inv" className="bx-h2">Invoices</h2>
@@ -271,7 +275,7 @@ function Invoices({ experienceId, isAdmin, invoices, fmt }: { experienceId: stri
               : <span className="bx-chip bx-chg">Due</span>}
           </div>
         </div>
-        <InvoicePayments experienceId={experienceId} invoice={i} isAdmin={isAdmin} />
+        <InvoicePayments experienceId={experienceId} invoice={i} isAdmin={isAdmin} onlineEnabled={onlineEnabled} stages={stages[i.invoice_id] ?? null} />
         </div>
       ))}
     </section>
