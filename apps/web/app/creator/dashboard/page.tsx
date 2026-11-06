@@ -29,6 +29,13 @@ import CreatorDashboardEmpty from './CreatorDashboardEmpty'
 import { shouldShowCreatorApproved } from '@/lib/creator-approval'
 import { redirect } from 'next/navigation'
 import { overlayCreatorLegs } from '@/lib/creator-leg-list'
+import GuapdAiSearchNotice from '@/components/creator/GuapdAiSearchNotice'
+import SearchVisibilityCard, { type SearchVisibilityCounts } from '@/components/creator/SearchVisibilityCard'
+import PendingInviteBanner from '@/components/creator/PendingInviteBanner'
+import { cookies } from 'next/headers'
+import { INVITE_COOKIE, INVITE_TOKEN } from '@/lib/meta/invites'
+import { creatorInvitesEnabled } from '@/lib/meta/config'
+import { creatorSearchCreatorSideEnabled } from '@/lib/ai/creator-search-flag'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
 
@@ -317,7 +324,32 @@ export default async function CreatorDashboardPage({
 
   /* Built ONCE and handed to each rendering as a slot. See the note at the
      return: what varies between the four is position, never content. */
-  const alertNode = <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
+  // Guapd AI search (0588/0589): the one-time notice until dismissed, and the
+  // "Your visibility" counts behind their own flag (CREATOR_VISIBILITY_CARD=1,
+  // off by default: turned on once brands have used search).
+  const aiCreatorSide = creatorSearchCreatorSideEnabled()
+  const { data: aiRow } = aiCreatorSide
+    ? await createAdminClient().from('creators').select('search_hidden_at, search_notice_dismissed_at').eq('id', creatorId).maybeSingle()
+    : { data: null }
+  const showAiNotice = aiCreatorSide && !!aiRow && !aiRow.search_notice_dismissed_at
+  const { data: aiCounts } = aiCreatorSide && process.env.CREATOR_VISIBILITY_CARD === '1'
+    ? await createAdminClient().rpc('creator_search_visibility', { p_creator_id: creatorId })
+    : { data: null }
+  // An invite link opened in this browser before signing up (0587).
+  const inviteToken = creatorInvitesEnabled() ? cookies().get(INVITE_COOKIE)?.value : undefined
+  const { data: pendingInvite } = inviteToken && INVITE_TOKEN.test(inviteToken)
+    ? await createAdminClient().from('brand_creator_invites').select('token, accepted_at, brands(name, brand_status)').eq('token', inviteToken).maybeSingle()
+    : { data: null }
+  const alertNode = (
+    <>
+      <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
+      {pendingInvite && !pendingInvite.accepted_at && (pendingInvite as unknown as { brands: { brand_status: string } | null }).brands?.brand_status === 'approved' && (
+        <PendingInviteBanner token={pendingInvite.token} brandName={(pendingInvite as unknown as { brands: { name: string | null } | null }).brands?.name ?? 'A brand'} />
+      )}
+      {showAiNotice && <GuapdAiSearchNotice />}
+      {aiCounts && <SearchVisibilityCard counts={aiCounts as SearchVisibilityCounts} hidden={!!aiRow?.search_hidden_at} />}
+    </>
+  )
   const tasksNode = <CreatorTaskCard tasks={tasks} />
 
   const mobileEmpty = showMobileEmpty ? (

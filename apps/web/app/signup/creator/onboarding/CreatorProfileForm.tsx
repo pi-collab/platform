@@ -72,6 +72,7 @@ export default function CreatorProfileForm() {
   const [city, setCity] = useState('')
   const [ageBracket, setAgeBracket] = useState('')
   const [terms, setTerms] = useState(false)
+  const [waUpdates, setWaUpdates] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -96,6 +97,7 @@ export default function CreatorProfileForm() {
       state,
       ageBracket,
       termsAccepted: terms,
+      whatsappUpdates: waUpdates,
     })
 
     if (res.status === 'error') {
@@ -262,6 +264,12 @@ export default function CreatorProfileForm() {
           {' '}and{' '}
           <Link href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</Link>
         </span>
+      </label>
+
+      {/* Optional and unticked: never required to finish signup (0590). */}
+      <label className="onboard-terms">
+        <input type="checkbox" checked={waUpdates} onChange={(e) => setWaUpdates(e.target.checked)} />
+        <span>Product updates on WhatsApp (optional). New features and tips, now and then. Turn it off anytime in Settings.</span>
       </label>
 
       <button type="submit" disabled={loading || !canSubmit} className="onboard-cta cta">

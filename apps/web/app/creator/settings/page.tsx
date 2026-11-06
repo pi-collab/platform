@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase/server'
 import { displayEmail } from '@/lib/synthetic-email'
 import { createAdminClient } from '@/lib/supabase/admin'
 import CreatorSettingsClient from './CreatorSettingsClient'
+import { creatorSearchCreatorSideEnabled } from '@/lib/ai/creator-search-flag'
 
 export default async function CreatorSettingsPage() {
   const ctx = await verifyCreator()
@@ -28,7 +29,7 @@ export default async function CreatorSettingsPage() {
   // Fetch creator details
   const { data: creator } = await admin
     .from('creators')
-    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email')
+    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email, search_hidden_at, languages, whatsapp_updates_consent_at')
     .eq('id', ctx.creatorId)
     .single()
 
@@ -53,10 +54,13 @@ export default async function CreatorSettingsPage() {
           : ((creator as Record<string, unknown>)?.niche ? [(creator as Record<string, unknown>).niche as string] : [])
       }
       creatorPlace={place}
+      whatsappUpdatesAt={((creator as Record<string, unknown>)?.whatsapp_updates_consent_at as string | null) ?? null}
+      creatorLanguages={((creator as Record<string, unknown>)?.languages as string[] | null) ?? []}
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}
       instagramConnection={instagramConnection}
+      searchVisibility={creatorSearchCreatorSideEnabled() ? { hiddenAt: ((creator as Record<string, unknown>)?.search_hidden_at as string | null) ?? null } : null}
       isGrowth={growth.isGrowth}
       creatorPhotoUrl={(creator as Record<string, unknown>)?.profile_photo_url as string ?? null}
       userEmail={displayEmail(user?.email) ?? ''}

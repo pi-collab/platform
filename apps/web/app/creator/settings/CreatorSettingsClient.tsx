@@ -12,6 +12,10 @@ import AvatarUpload from '@/components/AvatarUpload'
 
 /* ── Types ──────────────────────────────────────────────────────── */
 
+import { CONTENT_LANGUAGES } from '@/lib/ai/creator-search-types'
+import SearchVisibility from './SearchVisibility'
+import WhatsAppUpdatesToggle from './WhatsAppUpdatesToggle'
+import { FIELDS_HINT } from '@/lib/ai/search-visibility-copy'
 import ConnectedAccounts from './ConnectedAccounts'
 import type { IgConnectionView } from '@/lib/instagram-sync'
 import './connected-accounts.css'
@@ -27,10 +31,15 @@ interface Props {
   creatorBio: string
   creatorNiches: string[]
   creatorPlace: { city: string; state: string; ageBracket: string }
+  creatorLanguages: string[]
+  /** Product updates on WhatsApp consent time; null = not given. */
+  whatsappUpdatesAt: string | null
   creatorPrimaryPlatform: string
   creatorContactEmail: string
   creatorSocials: SocialEntry[]
   instagramConnection: IgConnectionView
+  /** Guapd AI search visibility; null when the creator side is off. */
+  searchVisibility: { hiddenAt: string | null } | null
   /** Growth creators have no shopfront, so the "View shopfront" pill is
    *  hidden rather than opening a locked page. */
   isGrowth?: boolean
@@ -74,11 +83,14 @@ export default function CreatorSettingsClient({
   creatorBio: initialBio,
   creatorNiches: initialNiches,
   creatorPlace: initialPlace,
+  creatorLanguages: initialLanguages,
+  whatsappUpdatesAt,
   creatorPrimaryPlatform: initialPlatform,
   creatorContactEmail: initialContactEmail,
   creatorPhotoUrl,
   creatorSocials: initialSocials,
   instagramConnection,
+  searchVisibility,
   userEmail: initialEmail,
   userPhone: initialPhone,
   userLanguage: initialLanguage,
@@ -95,6 +107,15 @@ export default function CreatorSettingsClient({
   useEffect(() => {
     if (tabParam && validSections.includes(tabParam)) setSection(tabParam)
   }, [tabParam])
+
+  // ?ai=1 (the Guapd AI opt-in link, also used in WhatsApp where a #fragment
+  // is not reliable): open on the switch.
+  const aiParam = searchParams.get('ai')
+  useEffect(() => {
+    if (aiParam !== '1') return
+    const t = setTimeout(() => document.getElementById('guapd-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+    return () => clearTimeout(t)
+  }, [aiParam, section])
   const [dirty, setDirty] = useState(false)
   const [toast, setToast] = useState('')
   const [saving, startSave] = useTransition()
@@ -107,6 +128,7 @@ export default function CreatorSettingsClient({
   const [city, setCity] = useState(initialPlace.city)
   const [placeState, setPlaceState] = useState(initialPlace.state)
   const [ageBracket, setAgeBracket] = useState(initialPlace.ageBracket)
+  const [languages, setLanguages] = useState<string[]>(initialLanguages)
   const [platform, setPlatform] = useState(initialPlatform)
   const [contactEmail, setContactEmail] = useState(initialContactEmail)
 
@@ -146,6 +168,7 @@ export default function CreatorSettingsClient({
         city,
         state: placeState,
         ageBracket,
+        languages,
         primaryPlatform: platform,
         contactEmail,
         socials: socialArr,
@@ -179,6 +202,7 @@ export default function CreatorSettingsClient({
     setCity(initialPlace.city)
     setPlaceState(initialPlace.state)
     setAgeBracket(initialPlace.ageBracket)
+    setLanguages(initialLanguages)
     setPlatform(initialPlatform)
     setContactEmail(initialContactEmail)
     setSocials(socialsToMap(initialSocials))
@@ -311,6 +335,10 @@ export default function CreatorSettingsClient({
                     <div style={labelStyle}>Niches</div>
                     <NichePicker value={niches} onChange={v => { setNiches(v); markDirty() }} max={5} inputStyle={fldStyle} />
                   </div>
+                  <div style={{ gridColumn: '1/-1' }}>
+                    <div style={labelStyle}>Languages you make content in <span style={{ fontWeight: 400, color: 'var(--ink-faint)' }}>(optional)</span></div>
+                    <LanguagePicker value={languages} onChange={v => { setLanguages(v); markDirty() }} />
+                  </div>
                   <FieldSelect label="State" value={placeState} options={[...INDIAN_STATES]} onChange={v => { setPlaceState(v); markDirty() }} placeholder="Select state" />
                   <FieldInput label="City" value={city} onChange={v => { setCity(v); markDirty() }} placeholder="Mumbai" />
                   <div>
@@ -343,6 +371,29 @@ export default function CreatorSettingsClient({
                   </p>
                 </div>
                 <ConnectedAccounts connection={instagramConnection} />
+                {searchVisibility && (
+                  <div id="guapd-ai">
+                    <SearchVisibility hiddenAt={searchVisibility.hiddenAt} />
+                    {/* The same fields as Profile, on the same form state, so
+                        editing here or there is one edit and one Save. */}
+                    <div style={{ marginTop: 16 }}>
+                      <div style={eyebrowStyle}>Help brands find you <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400 }}>(all optional)</span></div>
+                      <p style={{ margin: '6px 0 0', fontFamily: 'var(--font-ui)', fontSize: 12.5, color: 'var(--ink-faint)' }}>{FIELDS_HINT}</p>
+                      <div className="form-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 12 }}>
+                        <FieldInput label="City" value={city} onChange={v => { setCity(v); markDirty() }} placeholder="Mumbai" />
+                        <FieldSelect label="State" value={placeState} options={[...INDIAN_STATES]} onChange={v => { setPlaceState(v); markDirty() }} placeholder="Select state" />
+                        <div style={{ gridColumn: '1/-1' }}>
+                          <div style={labelStyle}>Languages you make content in</div>
+                          <LanguagePicker value={languages} onChange={v => { setLanguages(v); markDirty() }} />
+                        </div>
+                        <div style={{ gridColumn: '1/-1' }}>
+                          <div style={labelStyle}>Niches</div>
+                          <NichePicker value={niches} onChange={v => { setNiches(v); markDirty() }} max={5} inputStyle={fldStyle} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* The typed handles, in the same place as the connection.
                     They were in two different settings sections: a creator linked
@@ -391,6 +442,7 @@ export default function CreatorSettingsClient({
                   <FieldSelect label="Language" value={language} options={['English', 'हिन्दी']} onChange={v => { setLanguage(v); markDirty() }} />
                   <FieldSelect label="Timezone" value={timezone} options={['IST (GMT+5:30)', 'GMT', 'PST']} onChange={v => { setTimezone(v); markDirty() }} />
                 </div>
+                <WhatsAppUpdatesToggle consentAt={whatsappUpdatesAt} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 22 }}>
                   {/* Auth row */}
@@ -609,6 +661,36 @@ function FieldSelect({ label, value, options, onChange, placeholder }: { label: 
         {placeholder && <option value="">{placeholder}</option>}
         {options.map(o => <option key={o} value={o}>{o}</option>)}
       </select>
+    </div>
+  )
+}
+
+/** Content languages as tap-to-toggle chips, up to 5. Optional. */
+function LanguagePicker({ value, onChange }: { value: string[]; onChange: (v: string[]) => void }) {
+  const toggle = (l: string) => {
+    if (value.includes(l)) onChange(value.filter(x => x !== l))
+    else if (value.length < 5) onChange([...value, l])
+  }
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }} role="group" aria-label="Languages you make content in">
+      {CONTENT_LANGUAGES.map(l => {
+        const on = value.includes(l)
+        return (
+          <button
+            key={l}
+            type="button"
+            aria-pressed={on}
+            onClick={() => toggle(l)}
+            style={{
+              fontFamily: 'var(--font-ui)', fontSize: 13, padding: '7px 12px', borderRadius: 999, cursor: 'pointer',
+              border: `1px solid ${on ? 'var(--ink)' : 'var(--border-hairline)'}`,
+              background: on ? 'var(--ink)' : 'var(--card)', color: on ? '#fff' : 'var(--ink-soft)',
+            }}
+          >
+            {l}
+          </button>
+        )
+      })}
     </div>
   )
 }

@@ -1776,3 +1776,67 @@ GRANT USAGE, SELECT, UPDATE ON SEQUENCE deal_ref_seq TO service_role;
 -- experience_console_post_performance (operational staff; performance keys and
 -- deal ids only, no money) and experience_console_post_recheck (operational,
 -- audited through experience_console_audit). No new tables or policies.
+
+-- ── Guapd AI creator search (0585) ──────────────────────────────────────────
+-- brand_creator_searches: server only (RLS on, no policies, no client grants);
+-- read and written by /api/creators/search and /ai with the service role,
+-- always scoped to the signed-in brand's own brand_id in code.
+-- creator_search_pool(): service_role only; writes out its own gates (since
+-- 0588: /browse's rule minus hidden creators; 0585 had an opt-in
+-- in, bookable, not rejected, not the house account) and returns only fields a
+-- brand may see before a deal. creators.search_opt_in_at: no client SELECT
+-- grant (the column allowlist leaves it out); written by the server only.
+ALTER TABLE brand_creator_searches ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_creator_searches FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_creator_searches TO service_role;
+REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
+
+-- ── Guapd AI long briefs (0586) ─────────────────────────────────────────────
+-- creators.languages: optional, no client SELECT grant (server reads and
+-- writes it). creator_search_pool() recreated with languages, past_brands and
+-- deliverable_types; same service_role-only EXECUTE as 0585. No new tables.
+REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
+
+-- ── Instagram Creator Marketplace + invites (0587) ─────────────────────────
+-- brand_meta_connections (a brand's Facebook Login tokens, encrypted) and
+-- brand_creator_invites (tracked invite links; Instagram username only):
+-- server only. RLS on, no policies, no client grants. Read and written by the
+-- /api/meta/* and /api/invites/* routes with the service role, scoped in code
+-- to the signed-in brand (or, for accept, to the creator whose connected
+-- Instagram username is the invited one). Creator Marketplace results are
+-- never stored.
+ALTER TABLE brand_meta_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_creator_invites ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_meta_connections, brand_creator_invites FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_meta_connections, brand_creator_invites TO service_role;
+
+-- ── Guapd AI: /browse visibility + "Your visibility" (0588, 0589) ──────────
+-- 0588: creators.search_hidden_at / search_notice_dismissed_at (no client
+-- SELECT grant; server written); creator_search_pool recreated with /browse's
+-- rule (is_bookable = true AND is_guapd = false) minus hidden creators;
+-- search_opt_in_at dropped. Same service_role-only EXECUTE.
+-- 0589: brand_search_interactions (server only) and creator_search_visibility
+-- (service_role only).
+REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
+ALTER TABLE brand_search_interactions ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_search_interactions FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_search_interactions TO service_role;
+REVOKE EXECUTE ON FUNCTION creator_search_visibility(uuid) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_visibility(uuid) TO service_role;
+
+-- ── Guapd AI onboarding, Coming soon notes, Meta states, consent (0590) ─────
+-- All server only: RLS on, no policies, no client grants.
+ALTER TABLE brand_user_ai_onboarding ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_feature_interest ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_meta_eligibility ENABLE ROW LEVEL SECURITY;
+ALTER TABLE creator_consent_log ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_user_ai_onboarding, ai_feature_interest, brand_meta_eligibility, creator_consent_log FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_user_ai_onboarding, ai_feature_interest, brand_meta_eligibility, creator_consent_log TO service_role;
+-- creators.whatsapp_updates_consent_at: no client SELECT grant; server written.
+
+-- ── Guapd AI paging (0591) ──────────────────────────────────────────────────
+-- brand_creator_searches.ranked_ids / shown_count: new columns on a server-only
+-- table (0585 grants unchanged). No new tables or policies.

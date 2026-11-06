@@ -44,6 +44,11 @@ export type KnownEvent =
   | 'creator_onboarded'
   // Retention — the metric that matters most (see docs/build-plan.md §9)
   | 'deal_2_started'
+  // Guapd AI creator search (/ai)
+  | 'search_run'
+  | 'filter_edited'
+  | 'result_clicked'
+  | 'offer_started_from_search'
 
 /**
  * Event name. Accepts a KnownEvent with autocomplete and typo-checking, but

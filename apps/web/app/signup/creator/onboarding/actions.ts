@@ -1,5 +1,6 @@
 'use server'
 
+import { setWhatsAppUpdatesConsent } from '@/lib/creator-consent'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notifyOpsCreatorPending } from '@/lib/account-emails'
@@ -42,6 +43,8 @@ export async function saveOnboarding(data: {
    *  against the notice on the account screen; this upgrades that record to a
    *  deliberate act, which is why it overwrites rather than skips. */
   termsAccepted: boolean
+  /** Optional, unticked by default: product updates on WhatsApp (0590). */
+  whatsappUpdates?: boolean
   productType?: string
   productPricePaise?: number
 }): Promise<OnboardingResult> {
@@ -133,6 +136,12 @@ export async function saveOnboarding(data: {
     terms_accepted_at: new Date().toISOString(),
     terms_version: '2026-07-23',
   }).eq('id', profile.id)
+
+  // Optional product-updates consent: only recorded when ticked.
+  if (data.whatsappUpdates === true) {
+    const res = await setWhatsAppUpdatesConsent(creator.id, true, 'signup')
+    if (res.error) console.error('[saveOnboarding] whatsapp updates consent not saved')
+  }
 
   // Create product if provided
   if (productType?.trim() && productPricePaise != null && productPricePaise > 0) {
