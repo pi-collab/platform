@@ -8,7 +8,7 @@ SELECT version FROM supabase_migrations.schema_migrations WHERE version IN ('057
 -- ═════ PRE-CHECK 1 (0578): every existing invoice payment has a proof file. 0578 makes proof optional ONLY for
 -- method 'razorpay' and adds a constraint every existing row must pass. Expect 0.
 SELECT count(*) AS payments_without_proof FROM service_invoice_payments WHERE proof_path IS NULL;
--- And the methods in use today are all allowed by the new list. Expect only methods already in use (no NULLs).
+-- And every method in use is in the new list: bank_transfer, upi, cheque, cash, other (razorpay is new). Expect no other values.
 SELECT method, count(*) FROM service_invoice_payments GROUP BY 1 ORDER BY 1;
 
 -- ═════ PRE-CHECK 2 (0579): the new column gets '[]' for every existing quote, which the new constraint accepts
