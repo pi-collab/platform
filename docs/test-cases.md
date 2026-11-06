@@ -7970,7 +7970,7 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] Settings → Connected accounts: "Show me in Guapd AI search" switch, off by default, saves on toggle. Off = never in results; on = can appear. Copy says brands see name, photo, handle, city, niches and numbers, never phone or email
 - [ ] Under the switch, "Help brands find you (all optional)": City, State, Languages, Niches. Same form state as Profile: an edit in one shows in the other, one Save. City + state save without an age (Settings only; signup and the dashboard prompt still ask for age)
 - [ ] Profile has "Languages you make content in (optional)": up to 5 chips from the list
-- [ ] Creator home (all four renderings: phone and desktop, empty and populated): "Get found by brands on Guapd AI" card with Switch it on → `/creator/settings?tab=connected#guapd-ai`; gone once opted in or dismissed (per browser); hidden with the flag off
+- [ ] Creator home (all four renderings: phone and desktop, empty and populated): "Get found by brands on Guapd AI" card with Switch it on → `/creator/settings?tab=connected&ai=1` (scrolls to the switch; also the WhatsApp link); gone once opted in or dismissed (per browser); hidden with the flag off
 
 **Limits:** 6 new briefs per 5 minutes and 40 per day per brand (429 with a plain message; editing chips still works); 40 re-runs per saved search; results capped at 20; briefs 3–6,000 characters; model output capped at 1,500 tokens. Each search logs model, input and output tokens and brief length (never the text) and stores the token counts on the saved row.
 
@@ -7984,3 +7984,38 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] `creators.languages`: not readable by a signed-in brand
 - Automated: `scripts/test-creator-search.ts` (schema, ranking, chips, live staging grants with teardown) and `scripts/test-creator-search-staging.ts` (against the deployed staging site: real briefs and injection briefs through the model, and the creator switch in a browser at phone and desktop width).
 - 0585 and 0586 applied on staging by hand (`supabase db query --linked`) and ledgered. `CREATOR_SEARCH=1` is set on Vercel for the staging branch only. Prod: not yet.
+
+## 165. Instagram Creator Marketplace + creator invites (migration 0587, behind META_CREATOR_MARKETPLACE=1 on top of CREATOR_SEARCH=1)
+
+**Off (default):** no Instagram section on `/ai`; `/api/meta/*`, `/api/invites` and `/c/i-<token>` return 404.
+
+**Brand, Facebook connection (Facebook Login app: META_APP_ID / META_APP_SECRET, optional META_LOGIN_CONFIG_ID):**
+- [ ] `/ai` after a search: "Instagram Creator Marketplace" section with Connect Facebook → Facebook Login asking for instagram_basic, pages_show_list, pages_manage_metadata, business_management and instagram_creator_marketplace_discovery → back on the same search with "Facebook connected."
+- [ ] A Page without an Instagram business account, a declined discovery permission, a cancelled login and a forged `state` each come back with a plain notice and no connection
+- [ ] Several Pages: the first with an Instagram business account is used ("using the first Page…")
+- [ ] Tokens are stored encrypted (AES-256-GCM, INSTAGRAM_TOKEN_KEY); the Page token is what searches use
+- [ ] Facebook stops accepting the token (Graph 190): the connection becomes needs_reconnect and the section offers Reconnect
+- [ ] Removing Guapd in Facebook (deauthorize) or a data deletion request (signed with META_APP_SECRET) deletes the connection; a bad signature changes nothing. Both exempt from staging basic auth
+
+**Search:**
+- [ ] "Search Instagram too" runs the saved search against Creator Marketplace only when tapped. Options: posted in (7/30/90 days), verified accounts only, hide creators I have messaged, has a public email
+- [ ] Parameters are built from the search's validated filters and checked against Meta's allowed values before the call: countries ["IN"]; states only when every named city maps (Mumbai → IN-MH…); followers snapped to Meta's buckets; niches → interests (max 5); languages → ISO 639-1; options as chosen. Off-list values → 400, no call
+- [ ] `query`: META_SEARCH_QUERY_MODE=extracted (default) sends a short keyword phrase; =direct sends the brief trimmed to 200 characters with every sentence about money, dates/timing or an exclusion (competitors) dropped. Neither ever sends the full brief, a budget, dates or competitor names
+- [ ] Fields requested: id, username, biography, country, insights, category, email, profile_picture_url, onboarded_status
+- [ ] Cards: photo, @username, category, country, followers "from Instagram", bio. A bookable Guapd creator with that Instagram username (handle or connected account) shows **On Guapd** + Send offer (existing offer flow); otherwise **Not on Guapd yet** + Send invite
+- [ ] The email is never returned to the browser or stored; only "has a public email" is kept. Results are cached in server memory for 10 minutes, never written to the database
+- [ ] Limits: 15 Meta calls per saved search, 60 per brand per day (cached repeats are free)
+
+**Invites:**
+- [ ] Send invite creates one tracked link per creator per search: `guapd.com/c/i-<26 characters>` (the `i-` prefix can no longer be a storefront slug); Copy message, Open on Instagram (ig.me message link); WhatsApp appears only after the brand types a number and opens wa.me with the message (the number is not saved). Email invites are not offered until the email provider and domain are confirmed
+- [ ] The invite page shows the brand, Guapd's summary of the brief, deliverables and timeline; never the budget, exclusions or any email. Steps: sign up with phone OTP → connect Instagram → accept
+- [ ] Tracking on the invite: sent (first route used, and which), opened (first page view; also remembered in a cookie), signed up (a signed-in creator opens it), accepted
+- [ ] A creator who opened the invite before signing up sees "<Brand> invited you to a campaign" on their home until they accept
+- [ ] Accept works only for the creator whose connected Instagram username is the invited one; anyone else is told which account it was sent to. On accept the brand's members get an in-app notification
+
+**SECURITY:**
+- [ ] `brand_meta_connections`, `brand_creator_invites`: anon and authenticated have no rights; service_role only (mirrored in `rls.sql`)
+- [ ] The Graph and dialog hosts can be overridden (META_GRAPH_BASE / META_DIALOG_BASE) only outside production
+- [ ] No token, email or brief text in logs
+- Automated: `scripts/test-meta-marketplace.ts` (63 checks: parameters and redaction, and the full flow against a local Graph stub with staging data, with teardown). Not tested against real Meta: needs the Facebook Login app, the Creator Marketplace API access and app review.
+- 0587 applied on staging by hand and ledgered. Prod: not yet. Vercel: META_* variables not set anywhere yet, so the section stays off on staging too.

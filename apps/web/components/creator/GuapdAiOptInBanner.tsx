@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 
 /** The one-tap link to the Guapd AI search switch (Settings → Connected
  *  accounts). Used by this banner and by the WhatsApp / email ask. */
-export const GUAPD_AI_OPT_IN_PATH = '/creator/settings?tab=connected#guapd-ai'
+export const GUAPD_AI_OPT_IN_PATH = '/creator/settings?tab=connected&ai=1'
 
 const DISMISS_KEY = 'guapd-ai-optin-dismissed'
 

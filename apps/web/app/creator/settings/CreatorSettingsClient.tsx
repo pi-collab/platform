@@ -102,6 +102,15 @@ export default function CreatorSettingsClient({
   useEffect(() => {
     if (tabParam && validSections.includes(tabParam)) setSection(tabParam)
   }, [tabParam])
+
+  // ?ai=1 (the Guapd AI opt-in link, also used in WhatsApp where a #fragment
+  // is not reliable): open on the switch.
+  const aiParam = searchParams.get('ai')
+  useEffect(() => {
+    if (aiParam !== '1') return
+    const t = setTimeout(() => document.getElementById('guapd-ai')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150)
+    return () => clearTimeout(t)
+  }, [aiParam, section])
   const [dirty, setDirty] = useState(false)
   const [toast, setToast] = useState('')
   const [saving, startSave] = useTransition()

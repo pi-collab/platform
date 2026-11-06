@@ -30,6 +30,10 @@ import { shouldShowCreatorApproved } from '@/lib/creator-approval'
 import { redirect } from 'next/navigation'
 import { overlayCreatorLegs } from '@/lib/creator-leg-list'
 import GuapdAiOptInBanner from '@/components/creator/GuapdAiOptInBanner'
+import PendingInviteBanner from '@/components/creator/PendingInviteBanner'
+import { cookies } from 'next/headers'
+import { INVITE_COOKIE, INVITE_TOKEN } from '@/lib/meta/invites'
+import { metaMarketplaceEnabled } from '@/lib/meta/config'
 import { creatorSearchEnabled } from '@/lib/ai/creator-search-flag'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
@@ -324,9 +328,17 @@ export default async function CreatorDashboardPage({
     ? await createAdminClient().from('creators').select('search_opt_in_at').eq('id', creatorId).maybeSingle()
     : { data: null }
   const askAiOptIn = creatorSearchEnabled() && !optInRow?.search_opt_in_at
+  // An invite link opened in this browser before signing up (0587).
+  const inviteToken = metaMarketplaceEnabled() ? cookies().get(INVITE_COOKIE)?.value : undefined
+  const { data: pendingInvite } = inviteToken && INVITE_TOKEN.test(inviteToken)
+    ? await createAdminClient().from('brand_creator_invites').select('token, accepted_at, brands(name)').eq('token', inviteToken).maybeSingle()
+    : { data: null }
   const alertNode = (
     <>
       <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
+      {pendingInvite && !pendingInvite.accepted_at && (
+        <PendingInviteBanner token={pendingInvite.token} brandName={(pendingInvite as unknown as { brands: { name: string | null } | null }).brands?.name ?? 'A brand'} />
+      )}
       {askAiOptIn && <GuapdAiOptInBanner />}
     </>
   )

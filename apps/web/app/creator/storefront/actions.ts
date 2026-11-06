@@ -133,6 +133,10 @@ function validateSlug(slug: string): string | null {
   if (RESERVED_SLUGS.has(slug)) {
     return 'This URL isn\u2019t available'
   }
+  // "i-" is reserved for invite links (0587): guapd.com/c/i-<token>.
+  if (slug.startsWith('i-')) {
+    return 'This URL isn\u2019t available'
+  }
   return null
 }
 

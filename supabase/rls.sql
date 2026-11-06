@@ -1797,3 +1797,16 @@ GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO servi
 -- deliverable_types; same service_role-only EXECUTE as 0585. No new tables.
 REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
+
+-- ── Instagram Creator Marketplace + invites (0587) ─────────────────────────
+-- brand_meta_connections (a brand's Facebook Login tokens, encrypted) and
+-- brand_creator_invites (tracked invite links; Instagram username only):
+-- server only. RLS on, no policies, no client grants. Read and written by the
+-- /api/meta/* and /api/invites/* routes with the service role, scoped in code
+-- to the signed-in brand (or, for accept, to the creator whose connected
+-- Instagram username is the invited one). Creator Marketplace results are
+-- never stored.
+ALTER TABLE brand_meta_connections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brand_creator_invites ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON brand_meta_connections, brand_creator_invites FROM PUBLIC, anon, authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON brand_meta_connections, brand_creator_invites TO service_role;
