@@ -140,12 +140,13 @@ export async function middleware(request: NextRequest) {
   // public slug, no identifiers, and a brand declining analytics must not
   // silently strip their referring creator of credit.
   // Invite links (0587): guapd.com/c/i-<token> is a creator invite, not a
-  // storefront. Rewritten to /invite/<token>, carrying the session cookies;
+  // storefront. Rewritten to /creator-invite/<token> (NOT /invite/, which is
+  // the brand team invite), carrying the session cookies;
   // the "i-" prefix can never be a storefront slug.
   const inviteMatch = request.nextUrl.pathname.match(/^\/c\/(i-[a-z0-9]{26})$/)
   if (inviteMatch) {
     const url = request.nextUrl.clone()
-    url.pathname = `/invite/${inviteMatch[1]}`
+    url.pathname = `/creator-invite/${inviteMatch[1]}`
     const rewrite = NextResponse.rewrite(url, { request: { headers: withPathname() } })
     supabaseResponse.cookies.getAll().forEach((c) => rewrite.cookies.set(c))
     return rewrite

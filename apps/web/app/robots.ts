@@ -20,7 +20,7 @@ const PRIVATE = [
   // Creator portal
   '/creator/', '/creator$',
   // Tokenised links and auth flows
-  '/offer/', '/invite/', '/auth/', '/login', '/reset-password', '/instagram',
+  '/offer/', '/invite/', '/creator-invite/', '/auth/', '/login', '/reset-password', '/instagram',
   // API
   '/api/',
 ]

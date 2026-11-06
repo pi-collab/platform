@@ -8090,7 +8090,7 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - Automated: `scripts/test-creator-search.ts` (schema, ranking, chips, live staging grants with teardown) and `scripts/test-creator-search-staging.ts` (against the deployed staging site: real briefs and injection briefs through the model, and the creator switch in a browser at phone and desktop width).
 - 0585 and 0586 applied on staging by hand (`supabase db query --linked`) and ledgered. `CREATOR_SEARCH=1` is set on Vercel for the staging branch only. Prod: not yet.
 
-## 165. Instagram Creator Marketplace + creator invites (migration 0587, behind META_CREATOR_MARKETPLACE=1 on top of CREATOR_SEARCH=1)
+## 165. Instagram Creator Marketplace + creator invites (migration 0587; page at /creator-invite/, never /invite/ which is the brand team invite, behind META_CREATOR_MARKETPLACE=1 on top of CREATOR_SEARCH=1)
 
 **Off (default):** no Instagram section on `/ai`; `/api/meta/*`, `/api/invites` and `/c/i-<token>` return 404.
 
