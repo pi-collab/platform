@@ -7941,3 +7941,8 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 
 ### Browse storefront action bar
 - [ ] `/browse/[id]`: the Browse / Storefront / Start a deal bar floats at the bottom centre of the screen, not over the brand header or the creator's name and stats; scrolled to the end, the last section is not hidden behind it; on a phone it fits within the screen width
+
+### Instagram: a cancelled login asks the creator to reconnect
+- [ ] A connected creator whose token Instagram cancelled (Graph error 190: password changed, access removed, security check) is marked `needs_reconnect` on the next nightly sync, gets the reconnect WhatsApp/email/in-app notice once, and their storefront stops showing the stale figures as verified
+- [ ] A rate limit or Instagram outage still keeps `connected` and the last good snapshot, with the error in `sync_error`
+

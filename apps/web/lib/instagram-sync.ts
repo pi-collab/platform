@@ -1,7 +1,7 @@
 import 'server-only'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { decryptToken, encryptToken } from '@/lib/instagram-token'
-import { buildSnapshot, refreshLongLivedToken, fetchReelCandidates, fetchReelById, type IgSnapshot, type IgMediaItem } from '@/lib/instagram'
+import { buildSnapshot, refreshLongLivedToken, IgTokenInvalidError, fetchReelCandidates, fetchReelById, type IgSnapshot, type IgMediaItem } from '@/lib/instagram'
 import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { MAX_FEATURED_REELS } from '@/lib/featured-reels'
 import { notifyConnectionBroken } from '@/lib/instagram-break-notify'
@@ -259,6 +259,14 @@ export async function refreshAndSync(row: ConnectionRow): Promise<{ ok: boolean;
 
     return { ok: true, detail: 'synced' }
   } catch (err) {
+    // Instagram cancelled the token (password change, access removed, security
+    // check). Before this it took the transient path below, so 13 creators
+    // kept month-old numbers under "Verified" and were never asked to
+    // reconnect. Now it breaks the connection like any other dead token.
+    if (err instanceof IgTokenInvalidError) {
+      await markConnectionBroken(row.creator_id, 'needs_reconnect', err.message, patch)
+      return { ok: false, detail: 'token invalidated' }
+    }
     // The token may still be good; a sync can fail for rate limits or an
     // Instagram outage. Record it and keep the LAST GOOD snapshot rather than
     // blanking a storefront over a transient error.
