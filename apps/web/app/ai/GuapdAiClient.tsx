@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import MetaSection, { type MetaState } from './MetaSection'
+import { CARD_NOT_VERIFIED, CARD_SELF_REPORTED } from '@/lib/ai/opt-in-copy'
 import { useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
 import { fmtCount } from '@/lib/ai/rank-creators'
@@ -256,10 +257,10 @@ function ResultCard({ r, position, searchId }: { r: CreatorSearchResult; positio
         </div>
       ) : (
         <div className="gai-stats gai-stats--self">
-          <span className="gai-badge">Not verified</span>
+          <span className="gai-badge">{CARD_NOT_VERIFIED}</span>
           <span>
-            {r.selfReported?.followers ? `${fmtCount(r.selfReported.followers)} followers, self-reported`
-              : r.selfReported?.band ? `${r.selfReported.band} followers, self-reported` : 'No follower count on file'}
+            {r.selfReported?.followers ? `${fmtCount(r.selfReported.followers)} followers, ${CARD_SELF_REPORTED}`
+              : r.selfReported?.band ? `${r.selfReported.band} followers, ${CARD_SELF_REPORTED}` : 'No follower count on file'}
           </span>
         </div>
       )}

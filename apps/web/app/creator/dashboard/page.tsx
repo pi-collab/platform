@@ -33,8 +33,8 @@ import GuapdAiOptInBanner from '@/components/creator/GuapdAiOptInBanner'
 import PendingInviteBanner from '@/components/creator/PendingInviteBanner'
 import { cookies } from 'next/headers'
 import { INVITE_COOKIE, INVITE_TOKEN } from '@/lib/meta/invites'
-import { metaMarketplaceEnabled } from '@/lib/meta/config'
-import { creatorSearchEnabled } from '@/lib/ai/creator-search-flag'
+import { creatorInvitesEnabled } from '@/lib/meta/config'
+import { creatorSearchOptInEnabled } from '@/lib/ai/creator-search-flag'
 
 export const metadata: Metadata = { title: 'Dashboard · Guapd Creator' }
 
@@ -324,12 +324,12 @@ export default async function CreatorDashboardPage({
   /* Built ONCE and handed to each rendering as a slot. See the note at the
      return: what varies between the four is position, never content. */
   // Guapd AI search opt-in ask: only with the flag on and until they opt in.
-  const { data: optInRow } = creatorSearchEnabled()
+  const { data: optInRow } = creatorSearchOptInEnabled()
     ? await createAdminClient().from('creators').select('search_opt_in_at').eq('id', creatorId).maybeSingle()
     : { data: null }
-  const askAiOptIn = creatorSearchEnabled() && !optInRow?.search_opt_in_at
+  const askAiOptIn = creatorSearchOptInEnabled() && !optInRow?.search_opt_in_at
   // An invite link opened in this browser before signing up (0587).
-  const inviteToken = metaMarketplaceEnabled() ? cookies().get(INVITE_COOKIE)?.value : undefined
+  const inviteToken = creatorInvitesEnabled() ? cookies().get(INVITE_COOKIE)?.value : undefined
   const { data: pendingInvite } = inviteToken && INVITE_TOKEN.test(inviteToken)
     ? await createAdminClient().from('brand_creator_invites').select('token, accepted_at, brands(name)').eq('token', inviteToken).maybeSingle()
     : { data: null }

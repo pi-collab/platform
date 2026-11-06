@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { metaMarketplaceEnabled } from '@/lib/meta/config'
+import { creatorInvitesEnabled } from '@/lib/meta/config'
 import { INVITE_TOKEN } from '@/lib/meta/invites'
 import InviteClient, { type InviteState } from './InviteClient'
 
@@ -14,7 +14,7 @@ export const metadata = { title: 'Campaign invite · Guapd', robots: { index: fa
  * through: sign up with phone OTP → connect Instagram → accept.
  */
 export default async function InvitePage({ params }: { params: { token: string } }) {
-  if (!metaMarketplaceEnabled() || !INVITE_TOKEN.test(params.token)) notFound()
+  if (!creatorInvitesEnabled() || !INVITE_TOKEN.test(params.token)) notFound()
   const admin = createAdminClient()
   const { data: invite } = await admin.from('brand_creator_invites')
     .select('id, ig_username, summary, deliverables, timeline, accepted_at, signed_up_at, brands(name, logo_url)')

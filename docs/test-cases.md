@@ -7944,7 +7944,7 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 
 ## 164. Guapd AI: brief-based creator search (migration 0585, behind CREATOR_SEARCH=1)
 
-**Flag off (default):** `/ai` and `POST /api/creators/search` return 404; the Guapd AI icon is hidden in the brand nav; the creator opt-in toggle is hidden in Settings.
+**Flags off (default):** `/ai` and `POST /api/creators/search` return 404 and the Guapd AI icon is hidden. `CREATOR_SEARCH_OPTIN=1` alone shows only the creator side (Settings switch + optional fields, creator home card) with no brand surface; `CREATOR_SEARCH=1` turns on brand search and implies the creator side.
 
 **Brand, flag on:**
 - [ ] Nav: the sparkle icon (desktop header and phone bar) opens `/ai`. Page title "Guapd AI", subtitle "Find creators for your brief"
@@ -7970,7 +7970,7 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] Settings → Connected accounts: "Show me in Guapd AI search" switch, off by default, saves on toggle. Off = never in results; on = can appear. Copy says brands see name, photo, handle, city, niches and numbers, never phone or email
 - [ ] Under the switch, "Help brands find you (all optional)": City, State, Languages, Niches. Same form state as Profile: an edit in one shows in the other, one Save. City + state save without an age (Settings only; signup and the dashboard prompt still ask for age)
 - [ ] Profile has "Languages you make content in (optional)": up to 5 chips from the list
-- [ ] Creator home (all four renderings: phone and desktop, empty and populated): "Get found by brands on Guapd AI" card with Switch it on → `/creator/settings?tab=connected&ai=1` (scrolls to the switch; also the WhatsApp link); gone once opted in or dismissed (per browser); hidden with the flag off
+- [ ] Creator home (all four renderings: phone and desktop, empty and populated): "Let brands find you with Guapd AI" card (body + "Brands see … They never see your phone number or email.") with Switch it on → `/creator/settings?tab=connected&ai=1` (scrolls to the switch; also the WhatsApp link); gone once opted in or dismissed (per browser); hidden with the flag off
 
 **Limits:** 6 new briefs per 5 minutes and 40 per day per brand (429 with a plain message; editing chips still works); 40 re-runs per saved search; results capped at 20; briefs 3–6,000 characters; model output capped at 1,500 tokens. Each search logs model, input and output tokens and brief length (never the text) and stores the token counts on the saved row.
 
@@ -8019,3 +8019,5 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 - [ ] No token, email or brief text in logs
 - Automated: `scripts/test-meta-marketplace.ts` (63 checks: parameters and redaction, and the full flow against a local Graph stub with staging data, with teardown). Not tested against real Meta: needs the Facebook Login app, the Creator Marketplace API access and app review.
 - 0587 applied on staging by hand and ledgered. Prod: not yet. Vercel: META_* variables not set anywhere yet, so the section stays off on staging too.
+- [ ] Regression (`scripts/test-invite-routes.ts`): `/invite/<token>` is the brand team invite ("Join <brand>", brand_invites) and never serves a creator invite; creator invites render only at `/creator-invite/<token>`, reached as `/c/i-<token>`; prod's team invite page is identical; the 0e699e6 overwrite never reached main
+- [ ] `CREATOR_INVITES=1` (with CREATOR_SEARCH=1) turns on only the creator side of invites (page, open, accept, home card) while Meta stays off; creating invites still needs META_CREATOR_MARKETPLACE. Set on staging only, for `scripts/test-invite-signup-staging.ts` (full phone-OTP sign-up on an invite, fresh number, Instagram step simulated)

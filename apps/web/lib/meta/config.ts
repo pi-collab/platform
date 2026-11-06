@@ -9,6 +9,14 @@ export function metaMarketplaceEnabled(): boolean {
   return process.env.CREATOR_SEARCH === '1' && process.env.META_CREATOR_MARKETPLACE === '1'
 }
 
+/** The creator side of invites (the /c/i-<token> page, open/accept, the
+ *  creator home card): on with the Marketplace, or on its own with
+ *  CREATOR_INVITES=1, so the sign-up path can be tested while Meta stays off.
+ *  Creating invites stays behind the Marketplace flag. */
+export function creatorInvitesEnabled(): boolean {
+  return process.env.CREATOR_SEARCH === '1' && (process.env.META_CREATOR_MARKETPLACE === '1' || process.env.CREATOR_INVITES === '1')
+}
+
 /** Facebook Login app (NOT the Instagram Login app of 0493). */
 export function metaAppConfigured(): boolean {
   return Boolean(process.env.META_APP_ID && process.env.META_APP_SECRET)
