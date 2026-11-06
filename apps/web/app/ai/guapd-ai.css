@@ -133,3 +133,13 @@
   .gai-example { flex: 1; }
   .gai-list { grid-template-columns: 1fr 1fr; }
 }
+
+/* Instagram Creator Marketplace section */
+.gai-ig { margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border-hairline); display: flex; flex-direction: column; gap: 10px; }
+.gai-ig .gai-loosen { align-self: flex-start; text-decoration: none; display: inline-block; }
+.gai-opts { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+.gai-opt { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-soft); }
+.gai-opt select, .gai-opt input[type="text"], .gai-opt input[inputmode] { font: inherit; font-size: 13px; border: 1px solid var(--border-hairline); border-radius: 10px; padding: 5px 8px; background: var(--card); }
+.gai-invite { display: flex; flex-direction: column; gap: 6px; }
+.gai-invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.gai-invite .gai-gaps { overflow-wrap: anywhere; }

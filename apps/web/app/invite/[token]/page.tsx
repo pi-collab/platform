@@ -1,160 +1,56 @@
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import AcceptInviteCard from './AcceptInviteCard'
+import { metaMarketplaceEnabled } from '@/lib/meta/config'
+import { INVITE_TOKEN } from '@/lib/meta/invites'
+import InviteClient, { type InviteState } from './InviteClient'
 
-export const metadata = { title: 'Join your team', robots: { index: false, follow: false } }
+export const dynamic = 'force-dynamic'
+export const metadata = { title: 'Campaign invite · Guapd', robots: { index: false, follow: false } }
 
+/**
+ * A brand's invite to a creator found on Instagram (guapd.com/c/i-<token>).
+ * Shows Guapd's reading of the brief, never Meta data, and walks the creator
+ * through: sign up with phone OTP → connect Instagram → accept.
+ */
 export default async function InvitePage({ params }: { params: { token: string } }) {
+  if (!metaMarketplaceEnabled() || !INVITE_TOKEN.test(params.token)) notFound()
   const admin = createAdminClient()
+  const { data: invite } = await admin.from('brand_creator_invites')
+    .select('id, ig_username, summary, deliverables, timeline, accepted_at, signed_up_at, brands(name, logo_url)')
+    .eq('token', params.token).maybeSingle()
+  if (!invite) notFound()
+  const brand = (invite as unknown as { brands: { name: string | null; logo_url: string | null } | null }).brands
 
-  // 1. Look up invite by token
-  const { data: invite } = await admin
-    .from('brand_invites')
-    .select('id, brand_id, email, status, expires_at, brands(name)')
-    .eq('token', params.token)
-    .maybeSingle()
-
-  if (!invite) {
-    return <ErrorCard message="Invalid invite link." sub="This link doesn't exist. Check with your admin for a new invite." />
-  }
-
-  if (invite.status !== 'pending') {
-    const msg = invite.status === 'accepted'
-      ? 'This invite has already been used.'
-      : invite.status === 'revoked'
-        ? 'This invite has been revoked.'
-        : 'This invite is no longer valid.'
-    return <ErrorCard message={msg} sub="Ask your admin for a new invite." />
-  }
-
-  if (new Date(invite.expires_at) <= new Date()) {
-    // Mark expired in DB (best-effort, don't block the page)
-    admin.from('brand_invites').update({ status: 'expired' }).eq('id', invite.id).then(() => {})
-    return <ErrorCard message="This invite has expired." sub="Ask your admin for a new invite." />
-  }
-
-  const brandName = (invite as any).brands?.name ?? 'your team'
-
-  // 2. Check if user is authenticated
-  const supabase = createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  if (!user) {
-    // Not logged in — show the "Sign in to accept" card
-    return <AcceptInviteCard brandName={brandName} inviteEmail={invite.email} token={params.token} needsAuth />
-  }
-
-  // 3. User is authenticated — validate
-  const userEmail = user.email?.toLowerCase()
-  const inviteEmail = invite.email.toLowerCase()
-
-  if (userEmail !== inviteEmail) {
-    return (
-      <ErrorCard
-        message="Email mismatch"
-        sub={`This invite was sent to ${invite.email}. You're signed in as ${user.email}. Sign in with the invited email, or ask your admin for a new invite to your current email.`}
-      />
-    )
-  }
-
-  // Get internal user profile
-  const { data: profile } = await supabase
-    .from('users')
-    .select('id, role')
-    .eq('auth_id', user.id)
-    .maybeSingle()
-
-  if (!profile) {
-    // Edge case: auth exists but no users row (shouldn't happen normally)
-    // Create it (same as auth callback does)
-    const { data: newProfile, error: insertErr } = await admin
-      .from('users')
-      .insert({ auth_id: user.id, email: user.email, role: 'brand_member' })
-      .select('id')
-      .single()
-
-    if (insertErr || !newProfile) {
-      return <ErrorCard message="Account setup failed." sub="Please try again or contact support." />
+  let state: InviteState = 'visitor'
+  if (invite.accepted_at) state = 'accepted'
+  else {
+    const { data: { user } } = await createClient().auth.getUser()
+    if (user) {
+      const { data: profile } = await admin.from('users').select('id').eq('auth_id', user.id).maybeSingle()
+      const { data: creator } = profile ? await admin.from('creators').select('id').eq('user_id', profile.id).maybeSingle() : { data: null }
+      if (creator) {
+        // On Guapd now: the "signed up" step of the funnel.
+        if (!invite.signed_up_at) await admin.from('brand_creator_invites').update({ signed_up_at: new Date().toISOString() }).eq('id', invite.id).is('signed_up_at', null)
+        const { data: ig } = await admin.from('creator_instagram_connections').select('username, status').eq('creator_id', creator.id).maybeSingle()
+        state = !ig || ig.status !== 'connected' ? 'needs_instagram'
+          : (ig.username ?? '').toLowerCase() === invite.ig_username ? 'ready' : 'mismatch'
+      } else {
+        state = 'not_creator'
+      }
     }
-
-    return await acceptAndRedirect(admin, invite, newProfile.id)
   }
 
-  // A creator cannot join a brand team.
-  //
-  // Same boundary submitOnboarding enforces, and this was the other way across
-  // it: the profile was read as `select('id')`, so role never entered the
-  // decision and a brand could pull a creator-role account onto its team.
-  // users.role is an enum of two values, so a person who is both has no
-  // representation — the membership would exist while every role-based
-  // decision elsewhere still read 'creator'.
-  //
-  // The invite itself stays valid: it is addressed to an email, and the right
-  // person may yet accept it from a brand account.
-  if (profile.role === 'creator') {
-    return (
-      <ErrorCard
-        message="This is a creator account"
-        sub="Brand team invites can only be accepted by a brand account. Sign in with your work email, or ask your admin to invite that address instead."
-      />
-    )
-  }
-
-  // Check if already belongs to a brand
-  const { data: existingMembership } = await admin
-    .from('brand_members')
-    .select('id, brand_id')
-    .eq('user_id', profile.id)
-    .maybeSingle()
-
-  if (existingMembership) {
-    if (existingMembership.brand_id === invite.brand_id) {
-      // Already a member of this brand
-      redirect('/dashboard')
-    }
-    return (
-      <ErrorCard
-        message="Already belongs to a brand"
-        sub="Your account is already linked to another brand. Each account can only belong to one brand."
-      />
-    )
-  }
-
-  // 4. Accept the invite
-  return await acceptAndRedirect(admin, invite, profile.id)
-}
-
-async function acceptAndRedirect(
-  admin: ReturnType<typeof createAdminClient>,
-  invite: { id: string; brand_id: string },
-  userId: string
-) {
-  // Insert brand_members row
-  const { error: memberErr } = await admin
-    .from('brand_members')
-    .insert({ brand_id: invite.brand_id, user_id: userId, is_admin: false })
-
-  if (memberErr) {
-    return <ErrorCard message="Failed to join team." sub={memberErr.message} />
-  }
-
-  // Mark invite as accepted
-  await admin
-    .from('brand_invites')
-    .update({ status: 'accepted', accepted_by: userId })
-    .eq('id', invite.id)
-
-  redirect('/dashboard')
-}
-
-function ErrorCard({ message, sub }: { message: string; sub: string }) {
   return (
-    <main style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', minHeight: '100vh', background: '#FDFAF6', padding: '4rem 1.5rem' }}>
-      <div style={{ width: '100%', maxWidth: 480, background: '#fff', border: '1px solid #DDD3BE', borderRadius: 16, padding: '2rem', textAlign: 'center' }}>
-        <h1 style={{ fontFamily: 'Georgia, serif', fontSize: '1.25rem', fontWeight: 700, color: '#16100B', margin: '0 0 0.75rem' }}>{message}</h1>
-        <p style={{ fontSize: '0.9375rem', color: '#7A6D61', margin: 0, lineHeight: 1.5 }}>{sub}</p>
-      </div>
-    </main>
+    <InviteClient
+      token={params.token}
+      state={state}
+      brandName={brand?.name ?? 'A brand'}
+      brandLogo={brand?.logo_url ?? null}
+      username={invite.ig_username}
+      summary={invite.summary}
+      deliverables={invite.deliverables ?? []}
+      timeline={invite.timeline}
+    />
   )
 }

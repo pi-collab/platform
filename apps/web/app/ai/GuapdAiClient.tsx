@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import MetaSection, { type MetaState } from './MetaSection'
 import { useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
 import { fmtCount } from '@/lib/ai/rank-creators'
@@ -38,7 +39,7 @@ const GROUPS: { id: ChipGroup; title: string }[] = [
 
 type Outcome = CreatorSearchResponse | CreatorSearchError
 
-export default function GuapdAiClient({ initial }: { initial: CreatorSearchResponse | null }) {
+export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearchResponse | null; meta: MetaState | null }) {
   const [brief, setBrief] = useState(initial?.brief ?? '')
   const [data, setData] = useState<CreatorSearchResponse | null>(initial)
   const [error, setError] = useState<string | null>(null)
@@ -221,6 +222,7 @@ export default function GuapdAiClient({ initial }: { initial: CreatorSearchRespo
           </ol>
         </section>
       )}
+      {data && !pending && meta && <MetaSection key={data.searchId} searchId={data.searchId} meta={meta} />}
     </div>
   )
 }

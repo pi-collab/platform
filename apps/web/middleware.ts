@@ -32,6 +32,8 @@ const BASIC_AUTH_EXEMPT = new Set([
   // 0578: Razorpay's webhook, same reasoning: server to server, and it
   // verifies X-Razorpay-Signature against the webhook secret before acting.
   '/api/razorpay/webhook',
+  '/api/meta/deauthorize',
+  '/api/meta/data-deletion',
 ])
 
 function isExemptFromBasicAuth(pathname: string): boolean {
@@ -137,6 +139,18 @@ export async function middleware(request: NextRequest) {
   // NOT gated on analytics consent — see lib/attribution.ts. It carries a
   // public slug, no identifiers, and a brand declining analytics must not
   // silently strip their referring creator of credit.
+  // Invite links (0587): guapd.com/c/i-<token> is a creator invite, not a
+  // storefront. Rewritten to /invite/<token>, carrying the session cookies;
+  // the "i-" prefix can never be a storefront slug.
+  const inviteMatch = request.nextUrl.pathname.match(/^\/c\/(i-[a-z0-9]{26})$/)
+  if (inviteMatch) {
+    const url = request.nextUrl.clone()
+    url.pathname = `/invite/${inviteMatch[1]}`
+    const rewrite = NextResponse.rewrite(url, { request: { headers: withPathname() } })
+    supabaseResponse.cookies.getAll().forEach((c) => rewrite.cookies.set(c))
+    return rewrite
+  }
+
   const slugMatch = request.nextUrl.pathname.match(/^\/c\/([a-z0-9][a-z0-9-]{1,28}[a-z0-9])$/i)
   if (slugMatch && !request.cookies.get(ORIGIN_COOKIE)) {
     supabaseResponse.cookies.set(ORIGIN_COOKIE, slugMatch[1].toLowerCase(), {

@@ -508,12 +508,14 @@ export async function buildSnapshot(token: string): Promise<IgSnapshot> {
  * Compared with timingSafeEqual because a byte-by-byte early exit on a
  * signature check is the textbook timing oracle.
  */
-export function parseSignedRequest(signed: string): { userId: string; issuedAt: number } | null {
+/** `secretName`: the app whose callback this is. Instagram Login by default;
+ *  the brand Facebook Login app (0587) passes 'META_APP_SECRET'. */
+export function parseSignedRequest(signed: string, secretName = 'INSTAGRAM_APP_SECRET'): { userId: string; issuedAt: number } | null {
   const [sigPart, payloadPart] = signed.split('.', 2)
   if (!sigPart || !payloadPart) return null
 
   const b64url = (v: string) => Buffer.from(v.replace(/-/g, '+').replace(/_/g, '/'), 'base64')
-  const expected = createHmac('sha256', required('INSTAGRAM_APP_SECRET')).update(payloadPart).digest()
+  const expected = createHmac('sha256', required(secretName)).update(payloadPart).digest()
   const given = b64url(sigPart)
   if (given.length !== expected.length || !timingSafeEqual(given, expected)) return null
 
