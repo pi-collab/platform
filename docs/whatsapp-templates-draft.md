@@ -2,27 +2,11 @@
 
 Status 2026-11-06: drafts only. Do not submit to MSG91 or Meta until PJ says so.
 
-## Consent check (why the opt-in ask is not on WhatsApp yet)
+## Removed from the plan (PJ, 2026-11-06)
 
-What creators agree to today:
-- Signup screen: "By continuing, you agree to guapd's Terms and Privacy Policy."
-- Onboarding: one required checkbox, "I agree to the Terms of Service and Privacy Policy".
-- The Privacy Policy covers "sending notifications about your deals over WhatsApp, email and in the app" and login codes / deal notifications by WhatsApp and SMS (MSG91).
-- There is NO marketing or product-update consent: no checkbox, no stored flag, no opt-out.
+Guapd AI search now covers every creator visible on Browse, with no opt-in, so there is no opt-in ask to send. The former `guapd_ai_optin` template is dropped and was never submitted. Creators are told in the app instead (a one-time notice on the creator home).
 
-So a WhatsApp asking creators to switch on Guapd AI search is a promotional message they have not agreed to (and Meta would likely class it as Marketing, not Utility). The opt-in ask runs **in the app only** (creator home card + Settings) until a separate, optional "product updates on WhatsApp" consent exists and is recorded with a timestamp. Only creators who tick it would get template 1.
-
-## 1. `guapd_ai_optin` (Marketing; blocked on consent)
-
-Button: URL, dynamic. Base `https://guapd.com/{{1}}`, value `creator/settings?tab=connected&ai=1` (opens the switch).
-
-EN:
-> Hi {{1}}, brands on Guapd can now describe the creators they want and Guapd suggests matches. You only show up if you switch this on. Brands see your name, photo, handle, city, niches and numbers, never your phone number or email.
-Button: **Switch it on**
-
-HI:
-> नमस्ते {{1}}, Guapd पर ब्रांड अब बता सकते हैं कि उन्हें कैसे क्रिएटर चाहिए, और Guapd मैच सुझाता है। आप तभी दिखेंगे जब आप इसे चालू करेंगे। ब्रांड आपका नाम, फ़ोटो, हैंडल, शहर, niche और नंबर देखते हैं, आपका फ़ोन नंबर या ईमेल कभी नहीं।
-Button: **चालू करें**
+Consent finding, kept for reference: creators agree only to the Terms of Service and Privacy Policy, which cover deal notifications and login codes over WhatsApp/SMS/email (with a WhatsApp notification opt-out, `notify_whatsapp`). There is no marketing or product-update consent, so any promotional WhatsApp would need one first.
 
 ## 2. `instagram_reconnect_verified` (Utility: an account problem)
 
@@ -40,12 +24,14 @@ Button: **दोबारा कनेक्ट करें**
 
 The existing approved `instagram_reconnect` template already covers this case; this version adds what brands see.
 
-## In-app copy (live on staging, `apps/web/lib/ai/opt-in-copy.ts`)
+## In-app copy (live on staging, `apps/web/lib/ai/search-visibility-copy.ts`)
 
-Creator home card:
-- Title: Let brands find you with Guapd AI
-- Body: Brands describe the creators they want, and Guapd suggests matches. You only show up if you switch this on.
+One-time notice on the creator home:
+- Title: Brands can now find you through Guapd AI search
+- Body: When a brand describes the creators they want, Guapd can suggest you. You can turn this off in Settings, under Connected accounts.
 - Small print: Brands see your name, photo, handle, city, niches, and your numbers (marked verified if your Instagram is connected). They never see your phone number or email.
-- Button: Switch it on → `/creator/settings?tab=connected&ai=1`; × dismisses (per browser)
+- Button: Open Settings → `/creator/settings?tab=connected&ai=1`; × dismisses it for good
 
-Settings switch "Show me in Guapd AI search": same body and the same "Brands see / Brands never see" lines.
+Settings switch "Show me in Guapd AI search" (on by default):
+- Under it: Brands use Guapd AI search to find creators for their briefs. Keep this on to be suggested.
+- Turning it off asks first. "Hide you from Guapd AI search?" If you turn this off, you won't be suggested when brands search for creators with Guapd AI, so you may get fewer offers. Brands can still find you on Browse and open your profile, and your current deals carry on. You can turn it back on anytime. [Keep me visible] [Turn off]

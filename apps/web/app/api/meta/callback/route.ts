@@ -26,18 +26,26 @@ export async function GET(request: NextRequest) {
   try {
     const { userToken, expiresAt } = await exchangeFacebookCode(code)
     const account = await loadFacebookAccount(userToken)
-    if (!account.page) return back('no_instagram_page')
-    if (!account.scopes.includes(META_DISCOVERY_SCOPE)) return back('missing_permission')
+    // Why it cannot work, recorded once (0590) so the app explains it in
+    // Settings and stops prompting; cleared on a successful connection.
+    const blocked = !account.scopes.includes(META_DISCOVERY_SCOPE) ? 'missing_permission'
+      : account.totalPages === 0 ? 'no_page'
+        : !account.page ? 'no_instagram' : null
+    if (blocked) {
+      await createAdminClient().from('brand_meta_eligibility').upsert({ brand_id: brand.brandId, state: blocked, checked_at: new Date().toISOString() }, { onConflict: 'brand_id' })
+      return back(blocked)
+    }
+    const page = account.page!
     const u = encryptToken(userToken)
-    const pg = encryptToken(account.page.pageToken)
+    const pg = encryptToken(page.pageToken)
     const { error } = await createAdminClient().from('brand_meta_connections').upsert({
       brand_id: brand.brandId,
       connected_by: brand.profileId,
       fb_user_id: account.fbUserId,
-      page_id: account.page.pageId,
-      page_name: account.page.pageName,
-      ig_user_id: account.page.igUserId,
-      ig_username: account.page.igUsername,
+      page_id: page.pageId,
+      page_name: page.pageName,
+      ig_user_id: page.igUserId,
+      ig_username: page.igUsername,
       status: 'connected',
       user_token_ciphertext: u.ciphertext, user_token_iv: u.iv, user_token_tag: u.tag,
       page_token_ciphertext: pg.ciphertext, page_token_iv: pg.iv, page_token_tag: pg.tag,
@@ -47,6 +55,7 @@ export async function GET(request: NextRequest) {
       last_error: null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'brand_id' })
+    if (!error) await createAdminClient().from('brand_meta_eligibility').delete().eq('brand_id', brand.brandId)
     if (error) {
       console.error(`[meta] connect save failed brand=${brand.brandId}: ${error.message}`)
       return back('save_failed')

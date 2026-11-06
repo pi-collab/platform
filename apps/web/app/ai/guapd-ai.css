@@ -143,3 +143,25 @@
 .gai-invite { display: flex; flex-direction: column; gap: 6px; }
 .gai-invite-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .gai-invite .gai-gaps { overflow-wrap: anywhere; }
+
+/* Intro */
+.gai-steps { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.gai-steps li { display: flex; gap: 12px; background: var(--card); border: 1px solid var(--border-hairline); border-radius: 16px; padding: 14px; }
+.gai-steps li > span { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 13px; background: var(--lime-50); }
+.gai-steps p, .gai-included p { margin: 3px 0 0; font-size: 13.5px; color: var(--ink-soft); line-height: 1.45; }
+.gai-included { margin-top: 18px; display: flex; flex-direction: column; gap: 6px; }
+.gai-included .gai-loosen { align-self: flex-start; text-decoration: none; }
+.gai-intro-cta { display: block; text-align: center; text-decoration: none; margin-top: 20px; }
+.gai-soon { margin-top: 26px; display: flex; flex-direction: column; gap: 8px; }
+.gai-soon-btn { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 10px; border: 1px dashed var(--border-hairline); border-radius: 14px; padding: 12px 14px; background: transparent; color: var(--ink-faint); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.gai-soon-btn em { font-style: normal; font-size: 11.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.gai-soon-note { margin-top: 6px; padding: 10px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--border-hairline); font-size: 13px; color: var(--ink-soft); }
+.gai-soon-note p { margin: 0; }
+.gai-soon-form { display: flex; gap: 8px; margin-top: 8px; }
+.gai-soon-form input { flex: 1; min-width: 0; font: inherit; font-size: 13px; border: 1px solid var(--border-hairline); border-radius: 10px; padding: 7px 10px; }
+.gai-whatis { display: block; text-align: center; margin-top: 8px; font-size: 12.5px; color: var(--ink-faint); }
+.gai-banner { margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 10px 14px; border-radius: 14px; background: var(--bg-sky, #EEF6FD); border: 1px solid #DCEAF7; font-size: 13.5px; color: var(--ink-soft); }
+.gai-banner .gai-loosen { margin-top: 0; text-decoration: none; }
+.gai-source { margin-top: 12px; display: inline-flex; border: 1px solid var(--border-hairline); border-radius: 999px; padding: 3px; background: var(--card); }
+.gai-source button { border: 0; background: none; font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--ink-soft); }
+.gai-source button[aria-pressed="true"] { background: var(--ink); color: #fff; }

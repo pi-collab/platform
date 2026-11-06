@@ -8,6 +8,8 @@ import type { MetaParams } from './marketplace-params'
  */
 
 export class MetaTokenInvalidError extends Error {}
+/** Graph error 10 on Creator Marketplace: the account is not eligible (Instagram decides). */
+export class MetaNotEligibleError extends Error {}
 
 async function graph(path: string, params: Record<string, string>): Promise<any> {
   const res = await fetch(`${graphBase()}${path}?${new URLSearchParams(params)}`)
@@ -16,6 +18,7 @@ async function graph(path: string, params: Record<string, string>): Promise<any>
     const code = json?.error?.code
     const msg = json?.error?.message ?? `HTTP ${res.status}`
     if (code === 190) throw new MetaTokenInvalidError(msg)
+    if (code === 10) throw new MetaNotEligibleError(msg)
     throw new Error(`graph ${path.split('?')[0]} failed: ${msg}`)
   }
   return json
@@ -45,7 +48,7 @@ export interface MetaPage { pageId: string; pageName: string | null; pageToken: 
 
 /** The brand's Facebook user, granted scopes, and the first Page that has an
  *  Instagram business account (Creator Marketplace runs from it). */
-export async function loadFacebookAccount(userToken: string): Promise<{ fbUserId: string; scopes: string[]; page: MetaPage | null; pageCount: number }> {
+export async function loadFacebookAccount(userToken: string): Promise<{ fbUserId: string; scopes: string[]; page: MetaPage | null; pageCount: number; totalPages: number }> {
   const me = await graph('/me', { fields: 'id', access_token: userToken })
   const perms = await graph('/me/permissions', { access_token: userToken })
   const scopes = (perms.data ?? []).filter((x: any) => x.status === 'granted').map((x: any) => String(x.permission))
@@ -56,6 +59,7 @@ export async function loadFacebookAccount(userToken: string): Promise<{ fbUserId
     fbUserId: String(me.id),
     scopes,
     pageCount: withIg.length,
+    totalPages: (pages.data ?? []).length,
     page: first ? { pageId: String(first.id), pageName: first.name ?? null, pageToken: String(first.access_token), igUserId: String(first.instagram_business_account.id), igUsername: first.instagram_business_account.username ?? null } : null,
   }
 }

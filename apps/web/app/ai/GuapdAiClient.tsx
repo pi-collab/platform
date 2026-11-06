@@ -2,8 +2,8 @@
 
 import Link from 'next/link'
 import MetaSection, { type MetaState } from './MetaSection'
-import { CARD_NOT_VERIFIED, CARD_SELF_REPORTED } from '@/lib/ai/opt-in-copy'
-import { useState } from 'react'
+import { CARD_NOT_VERIFIED, CARD_SELF_REPORTED } from '@/lib/ai/search-visibility-copy'
+import { useEffect, useState } from 'react'
 import { trackEvent } from '@/lib/analytics'
 import { fmtCount } from '@/lib/ai/rank-creators'
 import { applyEdit, chipsFor, editText, withoutFilter } from '@/lib/ai/filter-chips'
@@ -47,6 +47,14 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
   const [pending, setPending] = useState(false)
   const [editing, setEditing] = useState<{ chip: Chip; text: string } | null>(null)
   const [chipError, setChipError] = useState<string | null>(null)
+  const [source, setSource] = useState<'guapd' | 'instagram' | 'both'>('guapd')
+
+  // After a Facebook login round trip (?meta=...): the connect outcome event.
+  useEffect(() => {
+    if (!meta?.connectResult) return
+    if (meta.connectResult.startsWith('connected')) trackEvent('ai_connect_completed')
+    else trackEvent('ai_connect_failed', { reason: meta.connectResult })
+  }, [meta?.connectResult])
 
   const length = brief.trim().length
   const over = length > MAX_BRIEF
@@ -113,6 +121,7 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
           Guapd AI
         </h1>
         <p className="gai-sub">Find creators for your brief</p>
+        <Link href="/ai?intro=1" className="gai-whatis">What is Guapd AI?</Link>
       </header>
 
       <form className="gai-box" onSubmit={(e) => { e.preventDefault(); void search(brief) }}>
@@ -149,6 +158,24 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
       )}
 
       {error && <p className="gai-error" role="alert">{error}</p>}
+
+      {/* Instagram Creator Marketplace: only when it is on in this environment. */}
+      {meta?.notice && <p className="gai-notes" role="status">{meta.notice}</p>}
+      {meta && !meta.connected && !meta.eligibility && (
+        <div className="gai-banner">
+          <span>Showing creators on Guapd. Connect Instagram to also search Instagram&apos;s Creator Marketplace</span>
+          <a className="gai-loosen" href={`/api/meta/connect${data ? `?s=${data.searchId}` : ''}`} onClick={() => trackEvent('ai_connect_clicked', { from: 'banner' })}>
+            {meta.needsReconnect ? 'Reconnect' : 'Connect'}
+          </a>
+        </div>
+      )}
+      {meta?.connected && (
+        <div className="gai-source" role="group" aria-label="Search">
+          {([['guapd', 'Guapd'], ['instagram', 'Instagram'], ['both', 'Both']] as const).map(([id, label]) => (
+            <button key={id} type="button" aria-pressed={source === id} onClick={() => { setSource(id); trackEvent('ai_source_changed', { source: id }) }}>{label}</button>
+          ))}
+        </div>
+      )}
 
       {data && (
         <div className="gai-reading">
@@ -202,7 +229,7 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
 
       {pending && <p className="gai-loading" aria-live="polite">Finding creators...</p>}
 
-      {data && !pending && (
+      {data && !pending && source !== 'instagram' && (
         <section className="gai-results" aria-label="Creators">
           {data.notice && (
             <div className="gai-notice">
@@ -223,14 +250,20 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
           </ol>
         </section>
       )}
-      {data && !pending && meta && <MetaSection key={data.searchId} searchId={data.searchId} meta={meta} />}
+      {data && !pending && meta?.connected && source !== 'guapd' && <MetaSection key={data.searchId} searchId={data.searchId} meta={meta} />}
     </div>
   )
 }
 
 function ResultCard({ r, position, searchId }: { r: CreatorSearchResult; position: number; searchId: string }) {
   const initials = r.name.split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()
-  const clicked = () => trackEvent('result_clicked', { position, verified: !!r.verified })
+  // Also recorded on the server for the creator's "Your visibility" counts
+  // (PostHog is consent-gated and has no creator id). keepalive: the page is
+  // navigating away as this is sent.
+  const record = (kind: 'profile_open' | 'offer_started') => {
+    fetch('/api/creators/search/interaction', { method: 'POST', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ searchId, creatorId: r.id, kind }) }).catch(() => {})
+  }
+  const clicked = () => { trackEvent('result_clicked', { position, verified: !!r.verified }); record('profile_open') }
   return (
     <li className="gai-card">
       <Link href={`/browse/${r.id}`} className="gai-card-top" onClick={clicked}>
@@ -239,7 +272,7 @@ function ResultCard({ r, position, searchId }: { r: CreatorSearchResult; positio
         </span>
         <span className="gai-who">
           <span className="gai-name">{r.name}</span>
-          <span className="gai-meta">{[r.handle ? `@${r.handle}` : null, r.city].filter(Boolean).join(' · ')}</span>
+          <span className="gai-meta">{r.handle ? `@${r.handle}` : ''}</span>
         </span>
       </Link>
 
@@ -251,16 +284,14 @@ function ResultCard({ r, position, searchId }: { r: CreatorSearchResult; positio
         <div className="gai-stats">
           <span className="gai-badge gai-badge--verified">Verified</span>
           <span>
-            {[r.verified.followers !== null ? `${fmtCount(r.verified.followers)} followers` : null,
-              r.verified.engagementPct !== null ? `${r.verified.engagementPct}% engagement` : null].filter(Boolean).join(' · ') || 'Instagram connected'}
+            {r.verified.followers !== null ? `${fmtCount(r.verified.followers)} followers` : 'Verified account'}
           </span>
         </div>
       ) : (
         <div className="gai-stats gai-stats--self">
           <span className="gai-badge">{CARD_NOT_VERIFIED}</span>
           <span>
-            {r.selfReported?.followers ? `${fmtCount(r.selfReported.followers)} followers, ${CARD_SELF_REPORTED}`
-              : r.selfReported?.band ? `${r.selfReported.band} followers, ${CARD_SELF_REPORTED}` : 'No follower count on file'}
+            {r.selfReported?.followers ? `${fmtCount(r.selfReported.followers)} followers, ${CARD_SELF_REPORTED}` : 'No follower count on file'}
           </span>
         </div>
       )}
@@ -271,7 +302,7 @@ function ResultCard({ r, position, searchId }: { r: CreatorSearchResult; positio
       <Link
         href={`/deals/new?creator=${r.id}&back=ai&s=${searchId}`}
         className="gai-offer"
-        onClick={() => trackEvent('offer_started_from_search', { position, verified: !!r.verified })}
+        onClick={() => { trackEvent('offer_started_from_search', { position, verified: !!r.verified }); record('offer_started') }}
       >
         Send offer
       </Link>

@@ -121,21 +121,22 @@ export function validateFilters(input: unknown): BriefFilters | null {
   return out
 }
 
-/** One creator card. Only what a brand may see before a deal: no phone, email,
- *  rate card, UPI, tokens, past brands or audience demographics. Verified and
- *  self-reported figures are separate fields and never mixed. */
+/** One creator card: only fields /browse already shows brands (no phone,
+ *  email, rate card, UPI, tokens, past brands, city, languages, engagement %
+ *  or Guapd track record). Verified and self-reported are never mixed. */
 export interface CreatorSearchResult {
   id: string
   name: string
   handle: string | null
   photoUrl: string | null
-  city: string | null
   nicheTags: string[]
-  /** Only for a connected Instagram synced in the last 10 days. */
-  verified: { followers: number | null; engagementPct: number | null; asOf: string } | null
-  /** Only when not verified: what the creator typed. */
-  selfReported: { followers: number | null; band: string | null } | null
-  /** One line, built from stored facts and the brief's own words. */
+  /** Only for a connected Instagram synced in the last 10 days. Followers only:
+   *  /browse shows a verified count, not an engagement rate. */
+  verified: { followers: number | null; asOf: string } | null
+  /** Only when not verified: the count the creator typed, as /browse shows it. */
+  selfReported: { followers: number | null } | null
+  /** One line, built from stored facts and the brief's own words, limited to
+   *  what /browse already shows brands. */
   reason: string
   /** What could not be checked for this creator. */
   gaps: string[]

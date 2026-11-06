@@ -8,6 +8,7 @@ import { mergeSocialAccounts } from '@/lib/social-accounts'
 import { setCreatorNiches } from '@/lib/creator-niches-server'
 import { validateLocation } from '@/lib/creator-location'
 import { CONTENT_LANGUAGES } from '@/lib/ai/creator-search-types'
+import { setWhatsAppUpdatesConsent } from '@/lib/creator-consent'
 
 // ── Update Creator Profile ───────────────────────────────────────
 
@@ -155,24 +156,49 @@ export async function updateCreatorAccount(data: AccountUpdate): Promise<{ error
   return {}
 }
 
-// ── Guapd AI search visibility (0585) ────────────────────────────
+// ── Guapd AI search visibility (0588) ────────────────────────────
 
 /**
- * Whether brands can find this creator in Guapd AI search. Off until the
- * creator switches it on; the timestamp records when they agreed. Server
- * written only, and only to the signed-in creator's own row.
+ * "Show me in Guapd AI search": on unless the creator turns it off. Off sets
+ * search_hidden_at, which removes them from Guapd AI search results only
+ * (Browse, their profile and storefront, offers and deals are unaffected).
+ * Server written only, and only to the signed-in creator's own row.
  */
-export async function setSearchVisibility(on: boolean): Promise<{ error?: string; optedInAt?: string | null }> {
+export async function setSearchVisible(visible: boolean): Promise<{ error?: string; hiddenAt?: string | null }> {
   const ctx = await verifyCreator()
-  const optedInAt = on ? new Date().toISOString() : null
+  const hiddenAt = visible ? null : new Date().toISOString()
   const { error } = await createAdminClient()
     .from('creators')
-    .update({ search_opt_in_at: optedInAt })
+    .update({ search_hidden_at: hiddenAt })
     .eq('id', ctx.creatorId)
   if (error) {
     console.error(`[settings] search visibility failed creator=${ctx.creatorId}: ${error.message}`)
     return { error: 'Could not save that. Try again.' }
   }
   revalidatePath('/creator/settings')
-  return { optedInAt }
+  revalidatePath('/creator/dashboard')
+  return { hiddenAt }
+}
+
+/** The one-time "brands can now find you" notice was dismissed. */
+export async function dismissSearchNotice(): Promise<{ error?: string }> {
+  const ctx = await verifyCreator()
+  const { error } = await createAdminClient()
+    .from('creators')
+    .update({ search_notice_dismissed_at: new Date().toISOString() })
+    .eq('id', ctx.creatorId)
+    .is('search_notice_dismissed_at', null)
+  if (error) return { error: 'Could not save that.' }
+  revalidatePath('/creator/dashboard')
+  return {}
+}
+
+// ── Product updates on WhatsApp (0590) ───────────────────────────
+
+/** Optional consent, opt-out as easy as opt-in. Nothing sends on it yet. */
+export async function setWhatsAppUpdates(on: boolean): Promise<{ error?: string }> {
+  const ctx = await verifyCreator()
+  const res = await setWhatsAppUpdatesConsent(ctx.creatorId, on, 'settings')
+  if (!res.error) revalidatePath('/creator/settings')
+  return res
 }

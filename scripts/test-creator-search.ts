@@ -6,9 +6,9 @@
  *   2. rankCreators: pure. No padding, known mismatch excludes, a blank is
  *      kept with its gap, engagement needs a verified figure, verified and
  *      self-reported never mixed, reasons built from stored facts, cap.
- *   3. STAGING, live: creator_search_pool returns only opted-in creators and
- *      no contact fields; anon and a signed-in brand can neither run it nor
- *      read brand_creator_searches. Opt-ins made here are reverted in finally.
+ *   3. STAGING, live: creator_search_pool returns exactly /browse's creators
+ *      minus hidden ones, no contact fields; anon cannot run it or read the
+ *      new tables; "Your visibility" counts cannot be inflated by one brand.
  *   4. The brief parser against injection, only if ANTHROPIC_API_KEY is set.
  *
  * Run from the repo root:
@@ -88,7 +88,9 @@ async function main() {
   const nice = rankCreators(pool, f({ mustHave: { niches: [HOME] }, niceToHave: { keywords: ['candles'] }, context: { tone: ['minimal'], deliverables: ['reels'] } })).results
   ok('nice-to-haves, tone and deliverables add to the score', nice[0].id === 'home', nice.map((r) => r.id).join(','))
   const top = nice[0]
-  ok('reason uses the brief\'s words', top.reason.startsWith('matches: home; also: candles; tone: minimal; sells reels; verified 4% engagement'), top.reason)
+  ok('reason uses the brief\'s words', top.reason === 'matches: home; also: candles; tone: minimal; sells reels; verified 40k followers', top.reason)
+  ok('reason never shows what /browse does not (engagement, deals, on time, replies, city, languages)', !/engagement|deals? completed|on time|replied|\bin mumbai\b|makes content in/i.test(rankCreators(pool, f({ mustHave: { niches: [HOME] }, hard: { cities: ['mumbai'], languages: ['Hindi'] } })).results.map((r) => r.reason).join(' | ')))
+  ok('cards carry no city or engagement field', !('city' in top) && !('engagementPct' in (top.verified ?? {})))
   ok('nice-to-haves alone never pad: a creator matching nothing is out', !ids(pool, f({ niceToHave: { keywords: ['candles'] } })).includes('fashion'))
   ok('only hard filters: everyone who fits them', ids([fashion, decor], f({ hard: { followersMax: 100000 } })).join() === 'decor')
   ok('engagement = avg(likes+comments) / followers', engagementPct(home) === 4)
@@ -125,13 +127,23 @@ async function main() {
   ok('an edited chip still passes the strict check', validateFilters(applyEdit(cf, 'must:keyword:candles', 'home fragrance')) !== null)
 
   console.log('\n== 2c. wording')
-  const { CARD_NOT_VERIFIED, CARD_SELF_REPORTED, BRANDS_SEE, BRANDS_NEVER_SEE } = await import('../apps/web/lib/ai/opt-in-copy')
+  const { CARD_NOT_VERIFIED, CARD_SELF_REPORTED, BRANDS_SEE, BRANDS_NEVER_SEE, SWITCH_OFF_CONFIRM, SEARCH_SWITCH } = await import('../apps/web/lib/ai/search-visibility-copy')
   const drafts = fs.readFileSync(path.resolve(__dirname, '../docs/whatsapp-templates-draft.md'), 'utf8')
   const reconnect = drafts.slice(drafts.indexOf('## 2. `instagram_reconnect_verified`'), drafts.indexOf('## In-app copy'))
   ok('reconnect message quotes the card\'s exact labels', reconnect.includes(`"${CARD_NOT_VERIFIED}"`) && reconnect.includes(`"${CARD_SELF_REPORTED}"`))
   const card = fs.readFileSync(path.resolve(__dirname, '../apps/web/app/ai/GuapdAiClient.tsx'), 'utf8')
   ok('the card renders those same labels', card.includes('{CARD_NOT_VERIFIED}') && card.includes('${CARD_SELF_REPORTED}'))
-  ok('opt-in copy names phone and email as never shown', BRANDS_NEVER_SEE.includes('phone') && BRANDS_NEVER_SEE.includes('email') && !/phone|email/.test(BRANDS_SEE))
+  ok('the copy names phone and email as never shown', BRANDS_NEVER_SEE.includes('phone') && BRANDS_NEVER_SEE.includes('email') && !/phone|email/.test(BRANDS_SEE))
+  ok('switch-off warning says what stays (Browse, profile, current deals)', /Browse/.test(SWITCH_OFF_CONFIRM.body) && /profile/.test(SWITCH_OFF_CONFIRM.body) && /current deals carry on/.test(SWITCH_OFF_CONFIRM.body))
+  ok('switch-off warning does not overclaim', !/won't get (any )?(deals|offers)|far fewer|no offers/i.test(SWITCH_OFF_CONFIRM.body + SEARCH_SWITCH.hint))
+  ok('Keep me visible / Turn off', SWITCH_OFF_CONFIRM.keep === 'Keep me visible' && SWITCH_OFF_CONFIRM.off === 'Turn off')
+
+  console.log('\n== 2d. WhatsApp product-updates consent is not used to send anything')
+  const { execSync } = await import('child_process')
+  const readers = execSync(`grep -rln "whatsapp_updates_consent_at" ${path.resolve(__dirname, '../apps/web')} --include=*.ts --include=*.tsx --exclude-dir=node_modules --exclude-dir=.next || true`).toString().trim().split('\n').filter(Boolean).map((f) => path.relative(path.resolve(__dirname, '..'), f)).sort()
+  ok('only the consent helper and creator Settings touch the consent field', JSON.stringify(readers) === JSON.stringify(['apps/web/app/creator/settings/page.tsx', 'apps/web/lib/creator-consent.ts']), readers.join(', '))
+  const form = fs.readFileSync(path.resolve(__dirname, '../apps/web/app/signup/creator/onboarding/CreatorProfileForm.tsx'), 'utf8')
+  ok('signup checkbox starts unticked and is not required', /const \[waUpdates, setWaUpdates\] = useState\(false\)/.test(form) && !/checked=\{waUpdates\}[^>]*required/.test(form))
 
   console.log('\n== 3. staging, live')
   const URL = process.env.NEXT_PUBLIC_SUPABASE_URL!, ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -139,51 +151,86 @@ async function main() {
   const admin = createClient(URL, process.env.SUPABASE_SERVICE_ROLE_KEY!, { auth: { persistSession: false } })
   const anon = createClient(URL, ANON, { auth: { persistSession: false } })
 
-  const { data: picks } = await admin.from('creators').select('id, search_opt_in_at').eq('is_bookable', true).eq('is_guapd', false).is('search_opt_in_at', null).limit(2)
-  const optedHere: string[] = []
+  const livePool = async () => {
+    const r = await admin.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })
+    return { ids: new Set((r.data ?? []).map((x: { creator_id: string }) => x.creator_id)), rows: r.data ?? [], error: r.error }
+  }
+  // /browse's rule, as app/browse/page.tsx queries it.
+  const { data: browse } = await admin.from('creators').select('id, search_hidden_at').eq('is_bookable', true).eq('is_guapd', false)
+  const browseVisible = (browse ?? []).filter((c) => !c.search_hidden_at).map((c) => c.id).sort()
+  const p0 = await livePool()
+  ok('search covers exactly the creators /browse shows, minus hidden ones', JSON.stringify(Array.from(p0.ids).sort()) === JSON.stringify(browseVisible), `${p0.ids.size} vs ${browseVisible.length}`)
+  const cols = Object.keys(p0.rows[0] ?? {})
+  ok('the pool carries no phone, email, rate card, UPI, token or snapshot', cols.length > 0 && !cols.some((k) => /phone|email|rate_card|upi|token|snapshot/.test(k)), cols.join(','))
+  const { data: house } = await admin.from('creators').select('id').eq('is_guapd', true)
+  ok('the Guapd house account is never in the pool', !(house ?? []).some((h) => p0.ids.has(h.id)))
+  const { data: notBookable } = await admin.from('creators').select('id').eq('is_bookable', false).limit(50)
+  ok('creators /browse does not show (not bookable) are never in the pool', !(notBookable ?? []).some((c) => p0.ids.has(c.id)))
+
+  const target = browseVisible[0]
   try {
-    const before = await admin.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })
-    const beforeIds = new Set((before.data ?? []).map((r: { creator_id: string }) => r.creator_id))
-    ok('a creator who has not opted in is not in the pool', !(picks ?? []).some((p) => beforeIds.has(p.id)))
-
-    for (const p of picks ?? []) {
-      await admin.from('creators').update({ search_opt_in_at: new Date().toISOString() }).eq('id', p.id)
-      optedHere.push(p.id)
-    }
-    const after = await admin.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })
-    ok('opting in puts them in the pool', !after.error && optedHere.every((id) => (after.data ?? []).some((r: { creator_id: string }) => r.creator_id === id)), after.error?.message)
-    const cols = Object.keys(after.data?.[0] ?? {})
-    ok('the pool carries no phone, email, rate card, UPI or token', !cols.some((k) => /phone|email|rate_card|upi|token|snapshot/.test(k)), cols.join(','))
-    const { data: house } = await admin.from('creators').select('id').eq('is_guapd', true)
-    ok('the Guapd house account is never in the pool', !(house ?? []).some((h) => (after.data ?? []).some((r: { creator_id: string }) => r.creator_id === h.id)))
-
-    const a1 = await anon.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })
-    ok('anon cannot run creator_search_pool', !!a1.error, a1.error?.message)
-    const a2 = await anon.from('brand_creator_searches').select('id').limit(1)
-    ok('anon cannot read brand_creator_searches', !!a2.error || (a2.data ?? []).length === 0, a2.error?.message)
-
-    const { data: bm } = await admin.from('brand_members').select('users(auth_id), brands!inner(is_guapd)').eq('brands.is_guapd', false).limit(1).single()
-    const authId = (bm as unknown as { users: { auth_id: string } })?.users?.auth_id
-    const u = authId ? await admin.auth.admin.getUserById(authId) : null
-    if (u?.data?.user?.email) {
-      const { data: link } = await admin.auth.admin.generateLink({ type: 'magiclink', email: u.data.user.email })
-      const s = await (await fetch(`${URL}/auth/v1/verify`, { method: 'POST', headers: { apikey: ANON, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'magiclink', token_hash: link!.properties!.hashed_token }) })).json()
-      const brand = createClient(URL, ANON, { global: { headers: { Authorization: `Bearer ${s.access_token}` } }, auth: { persistSession: false } })
-      const b1 = await brand.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })
-      ok('a signed-in brand cannot run creator_search_pool', !!b1.error, b1.error?.message)
-      const b2 = await brand.from('brand_creator_searches').select('id').limit(1)
-      ok('a signed-in brand cannot read brand_creator_searches directly', !!b2.error, b2.error?.message)
-      const b3 = await brand.from('brand_creator_searches').insert({ brand_id: '00000000-0000-0000-0000-000000000000', brief: 'x', filters: {} })
-      ok('a signed-in brand cannot write brand_creator_searches', !!b3.error, b3.error?.message)
-      const b4 = await brand.from('creators').select('search_opt_in_at').limit(1)
-      ok('a signed-in brand cannot read creators.search_opt_in_at', !!b4.error, b4.error?.message)
-    } else {
-      ok('found a staging brand user to test as', false)
-    }
+    await admin.from('creators').update({ search_hidden_at: new Date().toISOString() }).eq('id', target)
+    ok('a creator who switched "Show me in Guapd AI search" off is not in the pool', !(await livePool()).ids.has(target))
+    await admin.from('creators').update({ search_hidden_at: null }).eq('id', target)
+    ok('switching it back on returns them', (await livePool()).ids.has(target))
   } finally {
-    for (const id of optedHere) await admin.from('creators').update({ search_opt_in_at: null }).eq('id', id)
-    const { count } = await admin.from('creators').select('id', { count: 'exact', head: true }).in('id', optedHere.length ? optedHere : ['00000000-0000-0000-0000-000000000000']).not('search_opt_in_at', 'is', null)
-    ok('teardown: test opt-ins reverted', (count ?? 0) === 0)
+    await admin.from('creators').update({ search_hidden_at: null }).eq('id', target)
+  }
+
+  const a1 = await anon.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })
+  ok('anon cannot run creator_search_pool', !!a1.error, a1.error?.message)
+  const a2 = await anon.from('brand_creator_searches').select('id').limit(1)
+  ok('anon cannot read brand_creator_searches', !!a2.error, a2.error?.message)
+  const a3 = await anon.rpc('creator_search_visibility', { p_creator_id: target })
+  ok('anon cannot run creator_search_visibility', !!a3.error, a3.error?.message)
+
+  {
+    const { data: bm } = await admin.from('brand_members').select('users(auth_id), brands!inner(is_guapd)').eq('brands.is_guapd', false).limit(1).single()
+    const email = (await admin.auth.admin.getUserById((bm as any).users.auth_id)).data.user?.email
+    const { data: link } = await admin.auth.admin.generateLink({ type: 'magiclink', email: email! })
+    const sess = await (await fetch(`${URL}/auth/v1/verify`, { method: 'POST', headers: { apikey: ANON, 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'magiclink', token_hash: link!.properties!.hashed_token }) })).json()
+    const brand = createClient(URL, ANON, { global: { headers: { Authorization: `Bearer ${sess.access_token}` } }, auth: { persistSession: false } })
+    ok('a signed-in brand cannot run creator_search_pool', !!(await brand.rpc('creator_search_pool', { p_followers_min: null, p_followers_max: null, p_budget_max_paise: null })).error)
+    ok('a signed-in brand cannot run creator_search_visibility', !!(await brand.rpc('creator_search_visibility', { p_creator_id: target })).error)
+    ok('a signed-in brand cannot read brand_creator_searches', !!(await brand.from('brand_creator_searches').select('id').limit(1)).error)
+    ok('a signed-in brand cannot write brand_creator_searches', !!(await brand.from('brand_creator_searches').insert({ brand_id: '00000000-0000-0000-0000-000000000000', brief: 'x', filters: {} })).error)
+    ok('a signed-in brand cannot read brand_search_interactions', !!(await brand.from('brand_search_interactions').select('id').limit(1)).error)
+    ok('a signed-in brand cannot read creators.search_hidden_at', !!(await brand.from('creators').select('search_hidden_at').limit(1)).error)
+    ok('a signed-in brand cannot read creators.languages', !!(await brand.from('creators').select('languages').limit(1)).error)
+  }
+
+  console.log('\n== 3b. "Your visibility" counts')
+  const { data: brandRows } = await admin.from('brands').select('id, is_guapd').limit(200)
+  const real = (brandRows ?? []).filter((x) => !x.is_guapd).slice(0, 2).map((x) => x.id)
+  const houseBrand = (brandRows ?? []).find((x) => x.is_guapd)?.id
+  const made: string[] = []
+  const seed = async (brandId: string) => {
+    const { data } = await admin.from('brand_creator_searches').insert({ brand_id: brandId, brief: 'visibility test', filters: {}, result_ids: [target] }).select('id').single()
+    made.push(data!.id); return data!.id
+  }
+  try {
+    const before = (await admin.rpc('creator_search_visibility', { p_creator_id: target })).data as any
+    const s1 = await seed(real[0]); await seed(real[0]); await seed(real[0])
+    const after1 = (await admin.rpc('creator_search_visibility', { p_creator_id: target })).data as any
+    ok('one brand running three searches in a day counts once', after1.appeared - before.appeared === 1, `${before.appeared} → ${after1.appeared}`)
+    await seed(real[1])
+    const after2 = (await admin.rpc('creator_search_visibility', { p_creator_id: target })).data as any
+    ok('a second brand adds one', after2.appeared - before.appeared === 2)
+    if (houseBrand) { await seed(houseBrand); ok('Guapd house brands are not counted', ((await admin.rpc('creator_search_visibility', { p_creator_id: target })).data as any).appeared === after2.appeared) }
+    await admin.from('brand_search_interactions').insert({ search_id: s1, brand_id: real[0], creator_id: target, kind: 'profile_open' })
+    const dup = await admin.from('brand_search_interactions').insert({ search_id: s1, brand_id: real[0], creator_id: target, kind: 'profile_open' })
+    ok('the same click twice on one search is one row', !!dup.error)
+    const s2 = made[1]
+    await admin.from('brand_search_interactions').insert({ search_id: s2, brand_id: real[0], creator_id: target, kind: 'profile_open' })
+    const after3 = (await admin.rpc('creator_search_visibility', { p_creator_id: target })).data as any
+    ok('one brand opening the profile from two searches the same day counts once', after3.opened_profile - before.opened_profile === 1)
+    ok('counts only: no brand, search or brief in what the creator gets', JSON.stringify(Object.keys(after3).sort()) === '["appeared","opened_profile","started_offer"]')
+    const a4 = await anon.from('brand_search_interactions').select('id').limit(1)
+    ok('anon cannot read brand_search_interactions', !!a4.error, a4.error?.message)
+  } finally {
+    if (made.length) await admin.from('brand_creator_searches').delete().in('id', made)
+    const { count } = await admin.from('brand_search_interactions').select('id', { count: 'exact', head: true }).in('search_id', made.length ? made : ['00000000-0000-0000-0000-000000000000'])
+    ok('teardown: test searches and clicks removed', (count ?? 0) === 0)
   }
 
   console.log('\n== 4. brief parser (model)')

@@ -3,6 +3,8 @@ import { verifyBrand } from '@/lib/brand-auth'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import SettingsClient from './SettingsClient'
+import { metaAppConfigured, metaMarketplaceEnabled } from '@/lib/meta/config'
+import type { MetaEligibilityState } from '@/lib/meta/eligibility-copy'
 
 export default async function SettingsPage() {
   const brand = await verifyBrand()
@@ -62,6 +64,16 @@ export default async function SettingsPage() {
   const socials = (brandRow?.social_accounts ?? {}) as Record<string, string>
   const prefs = (user?.preferences ?? {}) as Record<string, string>
 
+  // Instagram Creator Marketplace status: only when it is on here.
+  let instagram = null
+  if (metaMarketplaceEnabled() && metaAppConfigured()) {
+    const [{ data: conn }, { data: elig }] = await Promise.all([
+      admin.from('brand_meta_connections').select('status, ig_username, page_name').eq('brand_id', brand.brandId).maybeSingle(),
+      admin.from('brand_meta_eligibility').select('state').eq('brand_id', brand.brandId).maybeSingle(),
+    ])
+    instagram = { connected: conn?.status === 'connected', needsReconnect: conn?.status === 'needs_reconnect', igUsername: conn?.ig_username ?? null, pageName: conn?.page_name ?? null, eligibility: (elig?.state ?? null) as MetaEligibilityState | null }
+  }
+
   return (
     <Suspense><SettingsClient
       brandName={brandRow?.name ?? brand.brandName}
@@ -80,6 +92,7 @@ export default async function SettingsPage() {
       authProvider={authProvider}
       authEmail={authEmail}
       isAdmin={brand.isAdmin}
+      instagram={instagram}
       teamMembers={teamMembers}
       pendingInvites={pendingInvites}
     /></Suspense>

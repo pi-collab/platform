@@ -7,6 +7,9 @@ import { validateFilters, type CreatorSearchResponse } from '@/lib/ai/creator-se
 import GuapdAiClient from './GuapdAiClient'
 import type { MetaState } from './MetaSection'
 import { metaAppConfigured, metaMarketplaceEnabled } from '@/lib/meta/config'
+import { CONNECT_NOTICES, ELIGIBILITY_TEXT, type MetaEligibilityState } from '@/lib/meta/eligibility-copy'
+import { getAiOnboarding, markAiOnboarding } from '@/lib/ai/onboarding'
+import AiIntro from './AiIntro'
 import './guapd-ai.css'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -16,21 +19,23 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *
  * ?s=<id> reopens one of the brand's own saved searches with its filters as
  * last edited, re-ranked against today's creators. Not counted as a run.
+ * The first visit per brand user shows the intro (0590); ?intro=1 shows it
+ * again ("What is Guapd AI?").
  */
-const META_NOTICES: Record<string, string> = {
-  connected: 'Facebook connected.',
-  connected_first_page: 'Facebook connected, using the first Page with an Instagram business account.',
-  cancelled: 'Facebook connection cancelled.',
-  no_instagram_page: 'No Facebook Page with an Instagram business account was found. Link one in Meta Business Suite, then connect again.',
-  missing_permission: 'Instagram Creator Marketplace access was not granted. Connect again and allow it.',
-  state_mismatch: 'That connection could not be verified. Try again.',
-  failed: 'Facebook could not be connected. Try again.',
-  save_failed: 'Facebook could not be connected. Try again.',
-}
-
-export default async function GuapdAiPage({ searchParams }: { searchParams: { s?: string; meta?: string } }) {
-  if (!creatorSearchEnabled()) notFound()
+export default async function GuapdAiPage({ searchParams }: { searchParams: { s?: string; meta?: string; intro?: string } }) {
+  if (process.env.CREATOR_SEARCH !== '1') notFound()
   const brand = await verifyBrand()
+  if (!creatorSearchEnabled(brand.brandId)) notFound()
+
+  const metaOn = metaMarketplaceEnabled() && metaAppConfigured()
+  const admin = createAdminClient()
+  const conn = metaOn ? (await admin.from('brand_meta_connections').select('status, ig_username').eq('brand_id', brand.brandId).maybeSingle()).data : null
+
+  const onboarding = await getAiOnboarding(brand.profileId)
+  if (!searchParams.s && !searchParams.meta && (searchParams.intro === '1' || !onboarding.introSeen)) {
+    if (!onboarding.introSeen) await markAiOnboarding(brand.profileId, { intro: true })
+    return <AiIntro instagram={metaOn ? { connected: !!conn && conn.status === 'connected' } : null} />
+  }
 
   let initial: CreatorSearchResponse | null = null
   if (searchParams.s && UUID.test(searchParams.s)) {
@@ -51,9 +56,18 @@ export default async function GuapdAiPage({ searchParams }: { searchParams: { s?
   }
 
   let meta: MetaState | null = null
-  if (metaMarketplaceEnabled() && metaAppConfigured()) {
-    const { data: conn } = await createAdminClient().from('brand_meta_connections').select('status, ig_username').eq('brand_id', brand.brandId).maybeSingle()
-    meta = { connected: !!conn, needsReconnect: conn?.status === 'needs_reconnect', igUsername: conn?.ig_username ?? null, notice: searchParams.meta ? META_NOTICES[searchParams.meta] ?? null : null }
+  if (metaOn) {
+    const { data: elig } = await admin.from('brand_meta_eligibility').select('state').eq('brand_id', brand.brandId).maybeSingle()
+    const state = (elig?.state ?? null) as MetaEligibilityState | null
+    meta = {
+      connected: !!conn && conn.status === 'connected',
+      needsReconnect: conn?.status === 'needs_reconnect',
+      igUsername: conn?.ig_username ?? null,
+      eligibility: state,
+      // A connect result: the callback's notice, or the eligibility reason it recorded.
+      notice: searchParams.meta ? (CONNECT_NOTICES[searchParams.meta] ?? (state ? ELIGIBILITY_TEXT[state] : null)) : null,
+      connectResult: searchParams.meta ?? null,
+    }
   }
 
   return <GuapdAiClient initial={initial} meta={meta} />

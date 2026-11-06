@@ -39,7 +39,7 @@ const fail = (status: number, kind: CreatorSearchError['kind'], message: string)
   NextResponse.json({ ok: false, kind, message } satisfies CreatorSearchError, { status })
 
 export async function POST(request: NextRequest) {
-  if (!creatorSearchEnabled()) return fail(404, 'off', 'Not found.')
+  if (process.env.CREATOR_SEARCH !== '1') return fail(404, 'off', 'Not found.')
 
   // Same-site only. The session cookie is SameSite=Lax already; this also
   // turns away a cross-site fetch that somehow carries it.
@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
     if (isRedirectError(err)) return fail(401, 'unauthorised', 'Sign in as a brand to search.')
     throw err
   }
+  // CREATOR_SEARCH_BRAND_IDS, when set, limits search to those brands.
+  if (!creatorSearchEnabled(brand.brandId)) return fail(404, 'off', 'Not found.')
 
   const raw = await request.text()
   if (raw.length > MAX_BODY) return fail(413, 'bad_request', 'That request is too large.')

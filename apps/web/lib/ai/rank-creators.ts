@@ -23,7 +23,9 @@ import { chipsFor, withoutFilter } from './filter-chips'
  * engagement and Guapd history (completed deals, on time delivery, replies to
  * offers), each only once there is enough of it to mean something.
  *
- * Every word of the reason line is a stored value or the brief's own words.
+ * Every word of the reason line is a stored value or the brief's own words,
+ * and only values /browse already shows brands: city, languages, engagement
+ * %, completed deals, on-time and reply figures rank but are never shown.
  */
 
 export interface PoolCreator {
@@ -226,15 +228,10 @@ export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESUL
     if (also.length) parts.push(`also: ${also.join(', ')}`)
     if (toneHits.length) parts.push(`tone: ${toneHits.join(', ')}`)
     if (sells.length) parts.push(`sells ${sells.join(', ')}`)
-    if (c.verified) {
-      parts.push(er !== null ? `verified ${er}% engagement`
-        : c.verifiedFollowers !== null ? `verified ${fmtCount(c.verifiedFollowers)} followers` : 'verified Instagram')
-    }
-    if (c.completedDeals > 0) parts.push(`${c.completedDeals} ${c.completedDeals === 1 ? 'deal' : 'deals'} completed`)
-    if (onTimeRate !== null) parts.push(`on time ${c.onTime} of ${c.onTimeMeasured}`)
-    if (responseRate !== null) parts.push(`replied to ${c.offersResponded} of ${c.offersReceived} offers`)
-    if (cityHit && c.city) parts.push(`in ${c.city}`)
-    if (languageHit) parts.push(`makes content in ${languageHit}`)
+    // Only what /browse already shows brands. Engagement %, completed deals,
+    // on-time and reply figures, the creator's city and languages are NOT on
+    // /browse, so they rank but are never shown (A1, 2026-11-06).
+    if (c.verified && c.verifiedFollowers !== null) parts.push(`verified ${fmtCount(c.verifiedFollowers)} followers`)
     if (parts.length === 0) parts.push('fits your filters')
 
     scored.push({
@@ -245,10 +242,9 @@ export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESUL
         name: c.fullName,
         handle: c.handle ? c.handle.trim().replace(/^@+/, '') || null : null,
         photoUrl: c.photoUrl,
-        city: c.city,
         nicheTags: mine.length ? mine.slice(0, 3) : c.niches.slice(0, 2).map(capitaliseNiche),
-        verified: c.verified && c.igSyncedAt ? { followers: c.verifiedFollowers, engagementPct: er, asOf: c.igSyncedAt } : null,
-        selfReported: c.verified ? null : { followers: c.typedFollowers, band: c.followerBand },
+        verified: c.verified && c.igSyncedAt ? { followers: c.verifiedFollowers, asOf: c.igSyncedAt } : null,
+        selfReported: c.verified ? null : { followers: c.typedFollowers },
         reason: parts.join('; '),
         gaps,
       },

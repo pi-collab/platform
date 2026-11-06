@@ -36,7 +36,7 @@ export async function runCreatorSearch(filters: BriefFilters): Promise<Omit<Crea
     // The whole opted-in pool, so a follower or budget filter can be tested too.
     const everyone = await loadCreatorPool(null)
     if (everyone.length === 0) {
-      notice = 'No creators have joined Guapd AI search yet.'
+      notice = 'No creators can be shown in Guapd AI search yet.'
     } else {
       loosen = suggestLoosen(everyone, filters, results.length)
       notice = results.length === 0

@@ -2,6 +2,7 @@
 
 // Shared with signup: a second list here meant a brand could pick a category
 // at onboarding that this dropdown did not offer, blanking it on first save.
+import InstagramMarketplaceSettings, { type InstagramSettingsState } from './InstagramMarketplaceSettings'
 import { BRAND_CATEGORIES } from '@/lib/brand-categories'
 
 import { useState, useTransition, useCallback, useEffect } from 'react'
@@ -47,6 +48,8 @@ interface Props {
   isAdmin: boolean
   teamMembers: Member[]
   pendingInvites: PendingInvite[]
+  /** Instagram Creator Marketplace; null unless it is on in this environment. */
+  instagram?: InstagramSettingsState | null
 }
 
 const SOCIAL_PLATFORMS = [
@@ -91,10 +94,12 @@ export default function SettingsClient({
   isAdmin,
   teamMembers,
   pendingInvites,
+  instagram = null,
 }: Props) {
   const searchParams = useSearchParams()
   const tabParam = searchParams.get('tab')
-  const validSections = SECTIONS.map(s => s.id)
+  const sections = instagram ? [...SECTIONS, { id: 'instagram', label: 'Instagram', icon: 'M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zM12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM17.5 6.5h.01' }] : SECTIONS
+  const validSections = sections.map(s => s.id)
   const initialSection = tabParam && validSections.includes(tabParam) ? tabParam : 'profile'
   const [section, setSection] = useState(initialSection)
 
@@ -205,8 +210,8 @@ export default function SettingsClient({
 
           {/* ═══ SIDEBAR ═══ */}
           <aside className="set-side panel" style={{ position: 'sticky', top: 88, display: 'flex', flexDirection: 'column', gap: 2, padding: 10, borderRadius: 20, border: '1px solid var(--frost-edge)', background: 'var(--card)', boxShadow: '0 24px 54px -40px rgba(40,45,25,.32), inset 0 1px 0 rgba(255,255,255,.92)' }}>
-            {SECTIONS.map(s => {
-              if (s.brandOnly && !isAdmin) return null
+            {sections.map(s => {
+              if ((s as { brandOnly?: boolean }).brandOnly && !isAdmin) return null
               const on = section === s.id
               const danger = s.id === 'danger'
               const col = danger ? '#C43D3D' : (on ? 'var(--ink)' : 'var(--ink-soft)')
@@ -357,6 +362,15 @@ export default function SettingsClient({
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* ── INSTAGRAM (Creator Marketplace, only when on) ── */}
+            {section === 'instagram' && instagram && (
+              <div className="reveal panel" style={panelStyle}>
+                <h2 style={h2Style}>Instagram Creator Marketplace</h2>
+                <p style={{ fontSize: 13, color: 'var(--ink-faint)', margin: '6px 0 0' }}>Search Instagram&apos;s creators from Guapd AI.</p>
+                <InstagramMarketplaceSettings state={instagram} />
               </div>
             )}
 
