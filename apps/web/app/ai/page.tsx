@@ -27,7 +27,9 @@ export default async function GuapdAiPage({ searchParams }: { searchParams: { s?
   const brand = await verifyBrand()
   if (!creatorSearchEnabled(brand.brandId)) notFound()
 
-  const metaOn = metaMarketplaceEnabled() && metaAppConfigured()
+  // Instagram Creator Marketplace: only with the Meta flag on AND an approved
+  // brand (its results go beyond what /browse shows an unapproved brand).
+  const metaOn = metaMarketplaceEnabled() && metaAppConfigured() && brand.brandStatus === 'approved'
   const admin = createAdminClient()
   const conn = metaOn ? (await admin.from('brand_meta_connections').select('status, ig_username').eq('brand_id', brand.brandId).maybeSingle()).data : null
 
@@ -39,7 +41,7 @@ export default async function GuapdAiPage({ searchParams }: { searchParams: { s?
 
   let initial: CreatorSearchResponse | null = null
   if (searchParams.s && UUID.test(searchParams.s)) {
-    const { data: row } = await createAdminClient()
+    const { data: row } = await admin
       .from('brand_creator_searches')
       .select('id, brief, filters')
       .eq('id', searchParams.s)
@@ -48,7 +50,11 @@ export default async function GuapdAiPage({ searchParams }: { searchParams: { s?
     const filters = row ? validateFilters(row.filters) : null
     if (row && filters) {
       try {
-        initial = { ok: true, searchId: row.id, brief: row.brief, ...(await runCreatorSearch(filters)) }
+        // Re-ranked against today's creators; the new order is stored, so Load
+        // more continues from it without repeats. The full order stays server-side.
+        const { rankedIds, ...run } = await runCreatorSearch(filters, { restricted: brand.brandStatus !== 'approved' })
+        await admin.from('brand_creator_searches').update({ ranked_ids: rankedIds, shown_count: run.results.length, result_ids: run.results.map((r) => r.id), result_count: run.results.length }).eq('id', row.id).eq('brand_id', brand.brandId)
+        initial = { ok: true, searchId: row.id, brief: row.brief, ...run }
       } catch (err) {
         console.error(`[creator-search] reopen failed search=${row.id}: ${err instanceof Error ? err.message : String(err)}`)
       }
@@ -67,6 +73,7 @@ export default async function GuapdAiPage({ searchParams }: { searchParams: { s?
       // A connect result: the callback's notice, or the eligibility reason it recorded.
       notice: searchParams.meta ? (CONNECT_NOTICES[searchParams.meta] ?? (state ? ELIGIBILITY_TEXT[state] : null)) : null,
       connectResult: searchParams.meta ?? null,
+      brandApproved: brand.brandStatus === 'approved',
     }
   }
 

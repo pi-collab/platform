@@ -135,13 +135,23 @@ export function engagementPct(c: PoolCreator): number | null {
   return Math.round((avg / c.verifiedFollowers) * 1000) / 10
 }
 
-export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESULT_CAP): RankOutcome {
+export interface RankOptions {
+  /** Unapproved brand (0591): get no more than /browse gives them. Filtering
+   *  or ranking on a signal /browse does not show would reveal it (a city
+   *  filter tells you who lives where), so city, languages and minimum
+   *  engagement are not applied, and engagement and Guapd history do not
+   *  affect the order. */
+  restricted?: boolean
+}
+
+export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESULT_CAP, opts: RankOptions = {}): RankOutcome {
+  const restricted = !!opts.restricted
   const h = f.hard
   const outsideIndia = h.country !== null && !/^(india|bharat)$/i.test(h.country.trim())
   if (outsideIndia) return { results: [], hiddenUnverified: 0, outsideIndia }
 
-  const cityTerms = h.cities.filter((c) => !REGION.test(c))
-  const wantLanguages = h.languages.map((l) => l.toLowerCase())
+  const cityTerms = restricted ? [] : h.cities.filter((c) => !REGION.test(c))
+  const wantLanguages = restricted ? [] : h.languages.map((l) => l.toLowerCase())
   const mustCount = f.mustHave.niches.length + f.mustHave.keywords.length
   const softAsked = f.niceToHave.niches.length + f.niceToHave.keywords.length + f.context.tone.length + (f.context.productCategory ? 1 : 0) > 0
   let hiddenUnverified = 0
@@ -197,8 +207,8 @@ export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESUL
     if (mustCount === 0 && softAsked && niceNiches.length + niceKeywords.length + toneHits.length + (productHit ? 1 : 0) === 0) continue
 
     // After relevance, so "may fit but not verified" counts only creators who otherwise fit.
-    const er = engagementPct(c)
-    if (h.minEngagementPct !== null) {
+    const er = restricted ? null : engagementPct(c)
+    if (h.minEngagementPct !== null && !restricted) {
       if (er === null) { hiddenUnverified++; continue }
       if (er < h.minEngagementPct) continue
     }
@@ -214,11 +224,13 @@ export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESUL
     if (cityHit) score += W.city
     if (c.verified) score += W.verified
     if (er !== null) score += Math.min(W.engagementCap, er * W.engagementPerPct)
-    score += Math.min(W.completedCap, W.completedPer * c.completedDeals)
-    const onTimeRate = c.onTimeMeasured >= MIN_ON_TIME_MEASURED ? c.onTime / c.onTimeMeasured : null
-    if (onTimeRate !== null) score += W.onTime * onTimeRate
-    const responseRate = c.offersReceived >= MIN_OFFERS ? c.offersResponded / c.offersReceived : null
-    if (responseRate !== null) score += W.response * responseRate
+    if (!restricted) {
+      score += Math.min(W.completedCap, W.completedPer * c.completedDeals)
+      const onTimeRate = c.onTimeMeasured >= MIN_ON_TIME_MEASURED ? c.onTime / c.onTimeMeasured : null
+      if (onTimeRate !== null) score += W.onTime * onTimeRate
+      const responseRate = c.offersReceived >= MIN_OFFERS ? c.offersResponded / c.offersReceived : null
+      if (responseRate !== null) score += W.response * responseRate
+    }
 
     // ── Reason: stored values and the brief's own words ──
     const parts: string[] = []
@@ -251,11 +263,14 @@ export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESUL
     })
   }
 
+  // A total order: the id breaks every tie, so the same filters over the same
+  // creators always give the same sequence (Load more depends on it).
   scored.sort((a, b) =>
     b.score - a.score
     || Number(b.c.verified) - Number(a.c.verified)
-    || b.c.completedDeals - a.c.completedDeals
-    || a.c.fullName.localeCompare(b.c.fullName))
+    || (restricted ? 0 : b.c.completedDeals - a.c.completedDeals)
+    || a.c.fullName.localeCompare(b.c.fullName)
+    || (a.c.id < b.c.id ? -1 : a.c.id > b.c.id ? 1 : 0))
 
   return { results: scored.slice(0, limit).map((s) => s.result), hiddenUnverified, outsideIndia }
 }
@@ -263,25 +278,31 @@ export function rankCreators(pool: PoolCreator[], f: BriefFilters, limit = RESUL
 /** The one chip whose removal shows the most extra creators, if any does.
  *  Never the last must-have: dropping it would turn the search into
  *  "everyone", which is padding. Nice-to-haves never narrow, so never offered. */
-export function suggestLoosen(pool: PoolCreator[], f: BriefFilters, current: number): LoosenHint | null {
+export function suggestLoosen(pool: PoolCreator[], f: BriefFilters, current: number, opts: RankOptions = {}): LoosenHint | null {
   const mustCount = f.mustHave.niches.length + f.mustHave.keywords.length
   let best: LoosenHint | null = null
   for (const chip of chipsFor(f)) {
     if (chip.group === 'nice') continue
     if (chip.group === 'must' && mustCount <= 1) continue
-    const n = rankCreators(pool, withoutFilter(f, chip.key)).results.length
+    if (opts.restricted && chip.group === 'hard' && /^hard:(city|language|engagement)/.test(chip.key)) continue
+    const n = rankCreators(pool, withoutFilter(f, chip.key), Infinity, opts).results.length
     if (n > current && (!best || n > best.wouldShow)) best = { key: chip.key, label: chip.label, wouldShow: n }
   }
   return best
 }
 
 /** What the brief asked for that the data cannot fully check, said plainly. */
-export function notChecked(f: BriefFilters): string[] {
+export function notChecked(f: BriefFilters, opts: RankOptions = {}): string[] {
   const out: string[] = []
-  if (f.hard.cities.some((c) => REGION.test(c))) out.push('Regions are not checked; only named cities are')
-  if (f.hard.cities.length) out.push('Creators with no city on file are kept')
-  if (f.hard.languages.length) out.push('Creators with no languages on file are kept')
-  if (f.hard.minEngagementPct !== null) out.push('Engagement is checked only for creators with Instagram connected')
+  if (opts.restricted && (f.hard.cities.length || f.hard.languages.length || f.hard.minEngagementPct !== null)) {
+    out.push('City, language and engagement filters apply once Guapd approves your brand')
+  }
+  if (!opts.restricted) {
+    if (f.hard.cities.some((c) => REGION.test(c))) out.push('Regions are not checked; only named cities are')
+    if (f.hard.cities.length) out.push('Creators with no city on file are kept')
+    if (f.hard.languages.length) out.push('Creators with no languages on file are kept')
+    if (f.hard.minEngagementPct !== null) out.push('Engagement is checked only for creators with Instagram connected')
+  }
   if (f.hard.budgetMinRupees !== null) out.push('Only the top of the budget is used')
   if (f.context.deliverables.includes('ugc') || f.context.deliverables.includes('live')) out.push('UGC and live are not matched to packages')
   if (f.unused.length) out.push(`Not used: ${f.unused.join(', ')}`)

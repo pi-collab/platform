@@ -13,7 +13,9 @@ import { facebookAuthorizeUrl } from '@/lib/meta/graph'
  */
 export async function GET(request: NextRequest) {
   if (!metaMarketplaceEnabled() || !metaAppConfigured()) return NextResponse.json({ ok: false, message: 'Not found.' }, { status: 404 })
-  await verifyBrand()
+  const brand = await verifyBrand()
+  // Approved brands only, like the search and invites it leads to.
+  if (brand.brandStatus !== 'approved') return NextResponse.redirect(new URL('/ai?meta=not_approved', request.url))
   const state = randomBytes(24).toString('base64url')
   const opts = { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' as const, path: '/api/meta', maxAge: 10 * 60 }
   cookies().set('meta_oauth_state', state, opts)

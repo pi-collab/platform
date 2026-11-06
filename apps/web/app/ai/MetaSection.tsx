@@ -24,6 +24,8 @@ export interface MetaState {
   notice: string | null
   /** The callback's ?meta= value, for the connect events. */
   connectResult: string | null
+  /** Invites need an approved brand (enforced server-side too). */
+  brandApproved: boolean
 }
 
 interface MetaCreator {
@@ -72,14 +74,14 @@ export default function MetaSection({ searchId, meta }: { searchId: string; meta
       {rows && rows.length === 0 && <p className="gai-notice">Instagram found no creators for this search.</p>}
       {rows && rows.length > 0 && (
         <ol className="gai-list" style={{ marginTop: 12 }}>
-          {rows.map((r, i) => <MetaCard key={r.username} r={r} position={i + 1} searchId={searchId} />)}
+          {rows.map((r, i) => <MetaCard key={r.username} r={r} position={i + 1} searchId={searchId} approved={meta.brandApproved} />)}
         </ol>
       )}
     </section>
   )
 }
 
-function MetaCard({ r, position, searchId }: { r: MetaCreator; position: number; searchId: string }) {
+function MetaCard({ r, position, searchId, approved }: { r: MetaCreator; position: number; searchId: string; approved: boolean }) {
   const [invite, setInvite] = useState<InviteInfo | null>(null)
   const [phone, setPhone] = useState('')
   const [copied, setCopied] = useState(false)
@@ -114,6 +116,8 @@ function MetaCard({ r, position, searchId }: { r: MetaCreator; position: number;
       {r.biography && <p className="gai-reason">{r.biography}</p>}
       {r.guapd ? (
         <Link href={`/deals/new?creator=${r.guapd.creatorId}&back=ai&s=${searchId}`} className="gai-offer" onClick={() => trackEvent('offer_started_from_search', { position, source: 'instagram' })}>Send offer</Link>
+      ) : !approved ? (
+        <p className="gai-gaps">Invites open once Guapd approves your brand.</p>
       ) : !invite ? (
         <button type="button" className="gai-offer" style={{ border: 0, cursor: 'pointer' }} onClick={openInvite}>Send invite</button>
       ) : (

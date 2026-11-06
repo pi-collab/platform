@@ -5,6 +5,7 @@ import { validateFilters } from '@/lib/ai/creator-search-types'
 import { brandForApi, jsonFail } from '@/lib/meta/api-auth'
 import { metaMarketplaceEnabled } from '@/lib/meta/config'
 import { inviteMessage, inviteUrl, instagramMessageUrl, instagramProfileUrl, newInviteToken } from '@/lib/meta/invites'
+import { NOT_APPROVED_MESSAGE, brandMayInvite, inviteSummary } from '@/lib/meta/invite-gate'
 
 /**
  * POST /api/invites { searchId, igUsername }: the tracked invite link for one
@@ -21,6 +22,10 @@ export async function POST(request: NextRequest) {
   let body: z.infer<typeof Body>
   try { const r = Body.safeParse(await request.json()); if (!r.success) return jsonFail(400, 'That request could not be read.'); body = r.data } catch { return jsonFail(400, 'That request could not be read.') }
   const username = body.igUsername.replace(/^@/, '').toLowerCase()
+  // Same approval rule as a first deal, server-side. Unapproved: no link at all.
+  if (!(await brandMayInvite(brand.brandId))) {
+    return NextResponse.json({ ok: false, kind: 'not_approved', message: NOT_APPROVED_MESSAGE }, { status: 403 })
+  }
 
   const admin = createAdminClient()
   const { data: search } = await admin.from('brand_creator_searches').select('id, filters').eq('id', body.searchId).eq('brand_id', brand.brandId).maybeSingle()
@@ -35,10 +40,11 @@ export async function POST(request: NextRequest) {
     if ((count ?? 0) >= 100) return jsonFail(429, 'That is a lot of invites today. Try again tomorrow.')
     const { data, error } = await admin.from('brand_creator_invites').insert({
       brand_id: brand.brandId, search_id: search.id, created_by: brand.profileId, token: newInviteToken(), ig_username: username,
-      summary: filters.summary, deliverables: filters.context.deliverables, timeline: filters.context.timeline,
+      summary: inviteSummary(filters), deliverables: filters.context.deliverables.filter((d) => d !== 'ugc' && d !== 'live'), timeline: null,
     }).select('id, token, sent_at, opened_at, signed_up_at, accepted_at').single()
     if (error || !data) { console.error(`[invite] create failed brand=${brand.brandId}: ${error?.message}`); return jsonFail(500, 'Could not create the invite. Try again.') }
     invite = data
+    await alertOnInviteBurst(admin, brand.brandId)
   }
   const link = inviteUrl(invite.token)
   return NextResponse.json({
@@ -49,4 +55,16 @@ export async function POST(request: NextRequest) {
     // Email invites wait for the provider and sending domain to be confirmed.
     emailAvailable: false,
   })
+}
+
+/** Log only: a brand creating many invites quickly (brand id and counts). */
+async function alertOnInviteBurst(admin: ReturnType<typeof createAdminClient>, brandId: string) {
+  try {
+    const now = Date.now()
+    const [{ count: m10 }, { count: d1 }] = await Promise.all([
+      admin.from('brand_creator_invites').select('id', { count: 'exact', head: true }).eq('brand_id', brandId).gte('created_at', new Date(now - 10 * 60_000).toISOString()),
+      admin.from('brand_creator_invites').select('id', { count: 'exact', head: true }).eq('brand_id', brandId).gte('created_at', new Date(now - 24 * 3_600_000).toISOString()),
+    ])
+    if ((m10 ?? 0) >= 10 || (d1 ?? 0) >= 50) console.warn(`[abuse-alert] invites many created brand=${brandId} invites_10m=${m10 ?? 0} invites_24h=${d1 ?? 0}`)
+  } catch { /* alerting never fails an invite */ }
 }

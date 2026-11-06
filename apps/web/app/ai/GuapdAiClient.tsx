@@ -16,7 +16,9 @@ import {
   type ChipGroup,
   type CreatorSearchError,
   type CreatorSearchResponse,
+  type CreatorSearchPage,
   type CreatorSearchResult,
+  PAGE_SIZE,
 } from '@/lib/ai/creator-search-types'
 
 /**
@@ -48,6 +50,22 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
   const [editing, setEditing] = useState<{ chip: Chip; text: string } | null>(null)
   const [chipError, setChipError] = useState<string | null>(null)
   const [source, setSource] = useState<'guapd' | 'instagram' | 'both'>('guapd')
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [pagedOnce, setPagedOnce] = useState(false)
+
+  // Load more: the next page of the stored order (server-side, no repeats).
+  async function loadMore() {
+    if (!data || loadingMore || !data.hasMore) return
+    setLoadingMore(true); setError(null)
+    const res = await fetch('/api/creators/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ searchId: data.searchId, more: true }) }).catch(() => null)
+    const j = (await res?.json().catch(() => null)) as CreatorSearchPage | CreatorSearchError | null
+    setLoadingMore(false)
+    if (!j || !j.ok) { setError(j && !j.ok ? j.message : 'Could not load more just now. Try again.'); return }
+    const seen = new Set(data.results.map((r) => r.id))
+    setData({ ...data, results: [...data.results, ...j.results.filter((r) => !seen.has(r.id))], hasMore: j.hasMore })
+    setPagedOnce(true)
+    trackEvent('search_load_more', { shown: j.shown })
+  }
 
   // After a Facebook login round trip (?meta=...): the connect outcome event.
   useEffect(() => {
@@ -81,7 +99,7 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
     const out = await call({ brief: b })
     setPending(false)
     if (!out.ok) { setError(out.message); return }
-    setData(out)
+    setData(out); setPagedOnce(false)
     try { window.history.replaceState(null, '', `/ai?s=${out.searchId}`) } catch { /* the URL is a convenience */ }
     trackEvent('search_run', { source: 'brief', result_count: out.results.length, filter_count: chipsFor(out.filters).length, brief_chars: b.length, asked_question: !!out.filters.question })
   }
@@ -92,7 +110,7 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
     const out = await call({ searchId: data.searchId, filters })
     setPending(false)
     if (!out.ok) { setError(out.message); return }
-    setData(out); setEditing(null)
+    setData(out); setEditing(null); setPagedOnce(false)
     trackEvent('filter_edited', { group: chip.group, field: chip.key.split(':')[1] ?? chip.key, action, result_count: out.results.length })
   }
 
@@ -248,6 +266,11 @@ export default function GuapdAiClient({ initial, meta }: { initial: CreatorSearc
           <ol className="gai-list">
             {data.results.map((r, i) => <ResultCard key={r.id} r={r} position={i + 1} searchId={data.searchId} />)}
           </ol>
+          {data.hasMore ? (
+            <button type="button" className="gai-loosen gai-more" onClick={loadMore} disabled={loadingMore}>{loadingMore ? 'Loading…' : 'Load more'}</button>
+          ) : (pagedOnce || data.results.length >= PAGE_SIZE) ? (
+            <p className="gai-end">That&apos;s everyone who matches. Try loosening a filter.</p>
+          ) : null}
         </section>
       )}
       {data && !pending && meta?.connected && source !== 'guapd' && <MetaSection key={data.searchId} searchId={data.searchId} meta={meta} />}

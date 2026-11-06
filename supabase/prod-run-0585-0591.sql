@@ -1,4 +1,4 @@
--- PROD RUN: 0585 → 0590 Guapd AI search (brief search, long briefs, Creator Marketplace + invites tables, /browse visibility, "Your visibility" counts). Prepared 2026-11-06. Includes 0590 (onboarding, Coming soon notes, Meta states, WhatsApp consent).
+-- PROD RUN: 0585 → 0591 Guapd AI search (brief search, long briefs, Creator Marketplace + invites tables, /browse visibility, "Your visibility" counts). Prepared 2026-11-06. Includes 0590 (onboarding, Coming soon notes, Meta states, WhatsApp consent) and 0591 (Load more order).
 -- NOT RUN YET. Run in the Supabase SQL editor on PROD, top to bottom, in this order, BEFORE the code release. Then the checks at the end.
 -- Safe with every flag off: nothing reads these until CREATOR_SEARCH / CREATOR_SEARCH_NOTICE are set.
 -- Check first: SELECT max(version) FROM supabase_migrations.schema_migrations;  (0584 must be applied)
@@ -738,6 +738,21 @@ REVOKE ALL ON creator_consent_log FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON creator_consent_log TO service_role;
 -- ===== STEP END: 0590 =====
 
+-- ===== STEP START: 0591 =====
+-- 0591: "Load more" on Guapd AI search, with a stable order.
+--
+-- ranked_ids: the full ranked order of a search (at most 500 creators),
+-- written when the brief runs or a chip edit re-runs it, and only then. Load
+-- more reads the next 20 from it, so a creator can never appear twice and the
+-- order never shifts under the brand. result_ids keeps meaning "shown to the
+-- brand" (it grows as pages load) and still feeds "Your visibility".
+-- shown_count: how many of ranked_ids have been shown. Server only, as 0585.
+ALTER TABLE brand_creator_searches ADD COLUMN IF NOT EXISTS ranked_ids uuid[] NOT NULL DEFAULT '{}';
+ALTER TABLE brand_creator_searches ADD COLUMN IF NOT EXISTS shown_count integer NOT NULL DEFAULT 0 CHECK (shown_count >= 0);
+ALTER TABLE brand_creator_searches DROP CONSTRAINT IF EXISTS bcs_ranked_ids_cap;
+ALTER TABLE brand_creator_searches ADD CONSTRAINT bcs_ranked_ids_cap CHECK (coalesce(array_length(ranked_ids, 1), 0) <= 500);
+-- ===== STEP END: 0591 =====
+
 -- CHECK 1: new tables exist, RLS on, no client rights. Expect 8 rows, rls true, every grant false.
 select c.relname, c.relrowsecurity as rls,
        has_table_privilege('anon', c.oid, 'SELECT') as anon_select,
@@ -765,5 +780,5 @@ select count(*) as i_slugs from creator_storefronts where slug like 'i-%';
 -- Ledger (the CLI is linked to staging; prod is run by hand):
 insert into supabase_migrations.schema_migrations (version, name) values
   ('0585', 'creator_search'), ('0586', 'creator_search_long_briefs'), ('0587', 'meta_creator_marketplace'),
-  ('0588', 'creator_search_browse_visibility'), ('0589', 'creator_search_visibility_stats'), ('0590', 'guapd_ai_onboarding_and_consent')
+  ('0588', 'creator_search_browse_visibility'), ('0589', 'creator_search_visibility_stats'), ('0590', 'guapd_ai_onboarding_and_consent'), ('0591', 'creator_search_paging')
 on conflict do nothing;

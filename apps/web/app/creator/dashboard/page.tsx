@@ -338,12 +338,12 @@ export default async function CreatorDashboardPage({
   // An invite link opened in this browser before signing up (0587).
   const inviteToken = creatorInvitesEnabled() ? cookies().get(INVITE_COOKIE)?.value : undefined
   const { data: pendingInvite } = inviteToken && INVITE_TOKEN.test(inviteToken)
-    ? await createAdminClient().from('brand_creator_invites').select('token, accepted_at, brands(name)').eq('token', inviteToken).maybeSingle()
+    ? await createAdminClient().from('brand_creator_invites').select('token, accepted_at, brands(name, brand_status)').eq('token', inviteToken).maybeSingle()
     : { data: null }
   const alertNode = (
     <>
       <InstagramReconnectBanner status={igConnection.status} isGrowth={isGrowth} />
-      {pendingInvite && !pendingInvite.accepted_at && (
+      {pendingInvite && !pendingInvite.accepted_at && (pendingInvite as unknown as { brands: { brand_status: string } | null }).brands?.brand_status === 'approved' && (
         <PendingInviteBanner token={pendingInvite.token} brandName={(pendingInvite as unknown as { brands: { name: string | null } | null }).brands?.name ?? 'A brand'} />
       )}
       {showAiNotice && <GuapdAiSearchNotice />}

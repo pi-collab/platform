@@ -165,3 +165,6 @@
 .gai-source { margin-top: 12px; display: inline-flex; border: 1px solid var(--border-hairline); border-radius: 999px; padding: 3px; background: var(--card); }
 .gai-source button { border: 0; background: none; font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 999px; cursor: pointer; color: var(--ink-soft); }
 .gai-source button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+
+.gai-more { display: block; margin: 16px auto 0; }
+.gai-end { margin: 16px 0 0; text-align: center; font-size: 13.5px; color: var(--ink-faint); }

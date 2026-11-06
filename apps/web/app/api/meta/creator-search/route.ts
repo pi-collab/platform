@@ -8,6 +8,7 @@ import { MetaNotEligibleError, MetaTokenInvalidError } from '@/lib/meta/graph'
 import { ELIGIBILITY_TEXT } from '@/lib/meta/eligibility-copy'
 import { DEFAULT_META_OPTIONS, MetaOptionsSchema, buildMetaParams } from '@/lib/meta/marketplace-params'
 import { loadBrandConnection, searchMarketplace } from '@/lib/meta/marketplace'
+import { NOT_APPROVED_MESSAGE, brandMayInvite } from '@/lib/meta/invite-gate'
 
 /**
  * POST /api/meta/creator-search { searchId, options? }: the brand's saved
@@ -30,6 +31,10 @@ export async function POST(request: NextRequest) {
   const a = await brandForApi(request)
   if ('response' in a) return a.response
   const brand = a.brand
+  // Instagram results show creators who are not on Guapd (bio, category,
+  // followers): more than /browse gives an unapproved brand, and every result
+  // leads to an invite. Same approval rule as invites.
+  if (!(await brandMayInvite(brand.brandId))) return NextResponse.json({ ok: false, kind: 'not_approved', message: NOT_APPROVED_MESSAGE.replace('Invites open', 'Instagram search opens') }, { status: 403 })
 
   const raw = await request.text()
   if (raw.length > 4000) return jsonFail(413, 'That request is too large.')

@@ -8053,3 +8053,30 @@ On an Experience the creator works with Guapd, not the brand, so they rate Guapd
 **SECURITY:** `brand_user_ai_onboarding`, `ai_feature_interest`, `brand_meta_eligibility`, `creator_consent_log`: RLS on, no policies, no anon/authenticated rights; service_role only (mirrored in `rls.sql`).
 - Automated: `scripts/test-guapd-ai-onboarding.ts` (run with Meta off, then with the Meta stub and GUAPD_META_ON=1), `scripts/test-meta-marketplace.ts` (error 10, no Page, no Instagram), `scripts/test-creator-search-staging.ts` (consent, card flag).
 - 0590 applied on staging by hand and ledgered. Prod: not yet.
+
+## 167. Guapd AI abuse controls: approval, paging, alerts (migration 0591)
+
+**The approval rule (unchanged, reused):** `brands.brand_status` (unreviewed → pending_review on the first held send or Experience request → approved/rejected by ops in /ops/brands, audited). Checked server-side by `resolveSendMode` (lib/send-gate.ts). Unapproved brands can browse everything /browse shows and build offers; their first offer is HELD (not visible to the creator) until ops approves.
+
+**Search, unapproved brand (no more than /browse):**
+- [ ] City, language and minimum-engagement filters are NOT applied, and engagement and Guapd deal history do not affect the order (filtering on them would reveal city, languages and engagement, which /browse does not show). The page says "City, language and engagement filters apply once Guapd approves your brand". Same card fields as approved brands (only /browse fields)
+- [ ] Instagram Creator Marketplace search is refused (403) and nothing about Instagram shows on /ai: its results show creators not on Guapd, beyond /browse
+
+**Paging:**
+- [ ] First 20 matches, then "Load more" adds the next 20 until the matches run out, then "That's everyone who matches. Try loosening a filter." No weak matches are ever added
+- [ ] The full order (≤500) is stored when the brief runs, a chip is edited, or a saved search is reopened; Load more reads the next 20 from it (never re-ranked): no creator twice. A creator who hid or stopped matching since is skipped, not replaced. The order is total (ties broken by id)
+- [ ] Load more on another brand's search: 404; `more` must be `true`; extra keys: 400
+
+**Limits (per brand):** 6 new briefs per 5 minutes and 40 per day; 40 chip edits per saved search; Load more until the stored order (≤500) ends; Instagram 15 calls per search and 60 a day; invites 100 a day; Coming-soon notes 20 a day.
+
+**Invites:**
+- [ ] Creating (`POST /api/invites`) and marking sent (`/api/invites/sent`) need an APPROVED brand, server-side (`brandMayInvite`, same rule as a first deal, but refused rather than held): 403 `not_approved` and no row written. The UI shows "Invites open once Guapd approves your brand." instead of Send invite
+- [ ] An invite whose brand is not approved (unapproved, or rejected later) does not exist: the page, `/api/invites/open` and `/api/invites/accept` 404, and the creator home card does not show it
+- [ ] The invite page shows only the approved brand's name and Guapd's own summary, built from fixed lists (niches, deliverables): "Looking for <niches> creators to make <deliverables> for a campaign on Guapd." No timeline, no model-written summary, nothing the brand typed (campaign text has no review today)
+
+**Alerting (log only, never brief text):**
+- [ ] `[abuse-alert] creator-search many different briefs brand=… distinct_10m=… distinct_24h=… total_24h=…` at ≥5 different briefs in 10 minutes or ≥25 in 24 hours (briefs compared as hashes)
+- [ ] `[abuse-alert] creator-search rate limit brand=… briefs_5m=… briefs_24h=…` when a limit is hit
+- [ ] `[abuse-alert] invites many created brand=… invites_10m=… invites_24h=…` at ≥10 in 10 minutes or ≥50 in 24 hours
+- Automated: `scripts/test-guapd-ai-abuse.ts` (API directly: unapproved invites refused, planted invite 404s, restricted search, Load more order and end, forged requests, the invite alert with GUAPD_DEV_LOG); `scripts/test-creator-search.ts` 2a (paging order, restricted ranking).
+- 0591 applied on staging by hand and ledgered. Prod: not yet.
