@@ -29,7 +29,7 @@ export default async function CreatorSettingsPage() {
   // Fetch creator details
   const { data: creator } = await admin
     .from('creators')
-    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email, search_opt_in_at')
+    .select('id, full_name, handle, bio, niche, niches, social_accounts, profile_photo_url, location, primary_platform, contact_email, search_opt_in_at, languages')
     .eq('id', ctx.creatorId)
     .single()
 
@@ -54,6 +54,7 @@ export default async function CreatorSettingsPage() {
           : ((creator as Record<string, unknown>)?.niche ? [(creator as Record<string, unknown>).niche as string] : [])
       }
       creatorPlace={place}
+      creatorLanguages={((creator as Record<string, unknown>)?.languages as string[] | null) ?? []}
       creatorPrimaryPlatform={(creator as Record<string, unknown>)?.primary_platform as string ?? 'Instagram'}
       creatorContactEmail={(creator as Record<string, unknown>)?.contact_email as string ?? displayEmail(user?.email) ?? ''}
       creatorSocials={socials}

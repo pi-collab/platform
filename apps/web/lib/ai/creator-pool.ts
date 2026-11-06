@@ -23,6 +23,9 @@ type Row = {
   niches: string[] | null
   city: string | null
   state: string | null
+  languages: string[] | null
+  past_brands: string[] | null
+  deliverable_types: string[] | null
   typed_followers: number | null
   follower_band: string | null
   verified: boolean
@@ -43,9 +46,9 @@ const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFi
  *  filter to loosen). */
 export async function loadCreatorPool(filters: BriefFilters | null): Promise<PoolCreator[]> {
   const { data, error } = await createAdminClient().rpc('creator_search_pool', {
-    p_followers_min: filters?.followersMin ?? null,
-    p_followers_max: filters?.followersMax ?? null,
-    p_budget_max_paise: filters?.budgetMaxRupees == null ? null : filters.budgetMaxRupees * 100,
+    p_followers_min: filters?.hard.followersMin ?? null,
+    p_followers_max: filters?.hard.followersMax ?? null,
+    p_budget_max_paise: filters?.hard.budgetMaxRupees == null ? null : filters.hard.budgetMaxRupees * 100,
   })
   if (error) throw new Error(`creator_search_pool failed: ${error.message}`)
 
@@ -59,6 +62,9 @@ export async function loadCreatorPool(filters: BriefFilters | null): Promise<Poo
     niches: r.niches ?? [],
     city: r.city,
     state: r.state,
+    languages: r.languages ?? [],
+    pastBrands: r.past_brands ?? [],
+    deliverableTypes: r.deliverable_types ?? [],
     typedFollowers: r.typed_followers,
     followerBand: r.follower_band,
     verified: r.verified,

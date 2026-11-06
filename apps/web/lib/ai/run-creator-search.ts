@@ -12,6 +12,18 @@ const THIN = 3
  * (which reopens a saved search), so both answer the same way.
  */
 export async function runCreatorSearch(filters: BriefFilters): Promise<Omit<CreatorSearchResponse, 'ok' | 'searchId' | 'brief'>> {
+  // A brief too vague to search on: ask, rather than list everyone. The
+  // question itself is shown from filters.question.
+  const h = filters.hard
+  const nothingAsked = filters.mustHave.niches.length + filters.mustHave.keywords.length
+    + filters.niceToHave.niches.length + filters.niceToHave.keywords.length
+    + filters.context.tone.length + (filters.context.productCategory ? 1 : 0)
+    + h.cities.length + h.languages.length + (h.country ? 1 : 0)
+    + [h.followersMin, h.followersMax, h.minEngagementPct, h.budgetMaxRupees].filter((v) => v !== null).length === 0
+  if (filters.question && nothingAsked) {
+    return { filters, results: [], notice: null, loosen: null, notChecked: notChecked(filters) }
+  }
+
   const pool = await loadCreatorPool(filters)
   const { results, hiddenUnverified, outsideIndia } = rankCreators(pool, filters, RESULT_CAP)
 

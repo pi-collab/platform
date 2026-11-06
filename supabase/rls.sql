@@ -1801,3 +1801,10 @@ REVOKE ALL ON brand_creator_searches FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON brand_creator_searches TO service_role;
 REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
+
+-- ── Guapd AI long briefs (0586) ─────────────────────────────────────────────
+-- creators.languages: optional, no client SELECT grant (server reads and
+-- writes it). creator_search_pool() recreated with languages, past_brands and
+-- deliverable_types; same service_role-only EXECUTE as 0585. No new tables.
+REVOKE EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION creator_search_pool(integer, integer, bigint) TO service_role;
